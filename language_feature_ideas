@@ -1,0 +1,7 @@
+- indent based
+- promises built in
+  - any function can be easily wrapped in a promise
+- functional language constructs built in
+- strong typing with type inference
+- easy ENUM creation
+- compatible with js
