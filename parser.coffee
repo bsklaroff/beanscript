@@ -55,8 +55,8 @@ BNF = {
 
   nonOpExpr: [
     'LEFT_PAREN expr RIGHT_PAREN'
-    '_Variable_'
     '_FunctionCall_'
+    '_Variable_'
     '_String_'
     '_NUMBER_'
   ]
@@ -89,8 +89,8 @@ BNF = {
   ]
 
   _String_: [
-    'SINGLE_QUOTE singleQuoteString{pieces[]} SINGLE_QUOTE',
-    'DOUBLE_QUOTE doubleQuoteString{pieces[]} DOUBLE_QUOTE'
+    'SINGLE_QUOTE singleQuoteString{fragments[]} SINGLE_QUOTE',
+    'DOUBLE_QUOTE doubleQuoteString{fragments[]} DOUBLE_QUOTE'
   ]
   singleQuoteString: [
     '_ESCAPED_SINGLE_QUOTES_ singleQuoteString'
@@ -124,10 +124,10 @@ LITERALS = {
   RIGHT_PAREN: '\\)'
   COMMA: ','
   _MOD_: '%'
-  _EXPONENT_: '\*\*'
-  _TIMES_: '\*'
+  _EXPONENT_: '\\*\\*'
+  _TIMES_: '\\*'
   _DIVIDED_BY_: '\''
-  _PLUS_: '+'
+  _PLUS_: '\\+'
   _MINUS_: '-'
   SINGLE_QUOTE: "'"
   DOUBLE_QUOTE: '"'
@@ -149,14 +149,16 @@ class Phrase
     RIGHT_PAREN: '\\)'
     STAR: '\\*'
 
+  # We denote a LITERAL by using all caps for it
+  @isLiteral: (key) -> not /[a-z]/.test(key)
+  # We denote an _ASTNode_ by surrounding it with underscores
+  @isASTNode: (key) -> key[0] == '_' and key[key.length - 1] == '_'
+
   constructor: (@key, @bnfOptions) ->
     @options = []
     for bnfOption in @bnfOptions
       @options.push(@_parseBNF(bnfOption))
-    @isASTNode = false
-    # By convention, we denote an _ASTNode_ by surrounding it with underscores
-    if @key[0] == '_' and @key[@key.length - 1] == '_'
-      @isASTNode = true
+    if Phrase.isASTNode(@key)
       @_checkASTChildren()
     return
 
@@ -195,7 +197,6 @@ class Phrase
       foundRightParen = false
       wipPhraseToken =
         phraseKey: null
-        isLiteral: false
         zeroOrMore: false
         astChildKey: null
         astChildIsArray: false
@@ -207,7 +208,6 @@ class Phrase
         continue
       else if symbolName == 'ID'
         wipPhraseToken.phraseKey = symbol
-        wipPhraseToken.isLiteral = @_isLiteral(symbol)
         foundRightParen = @_parseSymbolSuffix(wipPhraseToken)
       else if symbolName == 'LEFT_CURLY_BRACE'
         wipPhraseToken.astChildIsEmpty = true
@@ -223,13 +223,6 @@ class Phrase
       if foundRightParen
         break
     return phraseTokens
-
-  # By convention, we denote a LITERAL by using all caps for it
-  _isLiteral: (phraseKey) ->
-    for char in phraseKey
-      if /[a-z]/.test(char)
-        return false
-    return true
 
   _parseSymbolSuffix: (wipPhraseToken) ->
     while @bnfLineToParse.length > 0
@@ -270,6 +263,30 @@ class Phrase
         return [name, symbolMatch[0]]
     throw new Error("No valid symbol found while parsing: #{@bnfLineToParse}")
 
+class ASTNode
+  constructor: (@name, @literal = null) ->
+    @children = {}
+    return
+
+  addChild: (phraseToken, node) ->
+    if phraseToken.astChildIsArray
+      @children[phraseToken.astChildKey] ?= []
+      @children[phraseToken.astChildKey].push(node)
+    else
+      @children[phraseToken.astChildKey] = node
+    return
+
+  clone: ->
+    nodeCopy = new ASTNode(@name, @literal)
+    for key, child of @children
+      if child.name?
+        nodeCopy.children[key] = child.clone()
+      else
+        nodeCopy.children[key] = []
+        for subChild in child
+          nodeCopy.children[key].push(subChild.clone())
+    return nodeCopy
+
 phrases = {}
 for key, bnfOptions of BNF
   phrases[key] = new Phrase(key, bnfOptions)
@@ -277,31 +294,69 @@ for key, bnfOptions of BNF
 fs = require('fs')
 inputStr = fs.readFileSync(process.argv[2]).toString()
 
+parentASTNode = new ASTNode('_Program_')
+parentPhraseToken = null
+
 tryLiteral = (key, idx) ->
   literalMatch = inputStr[idx..].match(new RegExp("^#{LITERALS[key]}"))
   if literalMatch?
     return literalMatch[0]
   return null
 
-tryOption = (option, idx) ->
+tryOption = (option, idx, end = false) ->
   phraseTokenIdx = 0
+  children = null
+  newNodes = []
   while phraseTokenIdx < option.length
+    lastToken = end and phraseTokenIdx == option.length - 1
     phraseToken = option[phraseTokenIdx]
+     # Initialize children object
+    if phraseToken.astChildKey?
+      children ?= {}
     # Ignore whitespace
     whitespace = tryLiteral('WHITESPACE', idx)
     if whitespace?
       idx += whitespace.length
     # Attempt to match the next phrase token
-    if phraseToken.isLiteral
+    if Phrase.isLiteral(phraseToken.phraseKey)
       literal = tryLiteral(phraseToken.phraseKey, idx)
       if literal?
         nextIdx = idx + literal.length
+        if Phrase.isASTNode(phraseToken.phraseKey)
+          if phraseToken.astChildKey?
+            children[phraseToken.astChildKey] = new ASTNode(phraseToken.phraseKey, literal)
+          else
+            newNodes.push(new ASTNode(phraseToken.phraseKey, literal))
       else
         nextIdx = -1
     else if phraseToken.isGroup
-      nextIdx = tryOption(phraseToken.subphrases, idx)
+      [subNodes, nextIdx] = tryOption(phraseToken.subphrases, idx, lastToken)
+      if subNodes?
+        if phraseToken.astChildKey?
+          children[phraseToken.astChildKey] ?= []
+          for subNode in subNodes
+            children[phraseToken.astChildKey].push(subNode)
+        else
+          for subNode in subNodes
+            newNodes.push(subNode)
     else
-      nextIdx = tryPhrase(phraseToken.phraseKey, idx)
+      if Phrase.isASTNode(phraseToken.phraseKey)
+        [newNode, nextIdx] = tryASTPhrase(phraseToken.phraseKey, idx, lastToken)
+        if newNode?
+          if phraseToken.astChildKey?
+            children[phraseToken.astChildKey] = newNode
+          else
+            newNodes.push(newNode)
+      else
+        [subNodes, nextIdx] = tryNonASTPhrase(phraseToken.phraseKey, idx, lastToken)
+        if subNodes?
+          if phraseToken.astChildKey?
+            children[phraseToken.astChildKey] ?= []
+            for subNode in subNodes
+              children[phraseToken.astChildKey].push(subNode)
+          else
+            for subNode in subNodes
+              newNodes.push(subNode)
     # If this phraseToken has a STAR, only move forward if we didn't match
     if phraseToken.zeroOrMore
       if nextIdx == -1
@@ -310,20 +365,29 @@ tryOption = (option, idx) ->
         idx = nextIdx
     # If this phraseToken has no STAR, return -1 if we didn't match
     else if nextIdx == -1
-      return -1
+      return [null, -1]
     else
       idx = nextIdx
       phraseTokenIdx++
-  return idx
+  if children?
+    return [children, idx]
+  return [newNodes, idx]
 
-tryPhrase = (key, idx) ->
+tryASTPhrase = (key, idx, end = false) ->
   phrase = phrases[key]
   for option in phrase.options
-    nextIdx = tryOption(option, idx)
-    if nextIdx != -1
-      return nextIdx
-  return -1
+    newNode = new ASTNode(key)
+    [newNode.children, nextIdx] = tryOption(option, idx, end)
+    if nextIdx != -1 and (not end or nextIdx == inputStr.length)
+      return [newNode, nextIdx]
+  return [null, -1]
 
-# TODO: match as much as possible
+tryNonASTPhrase = (key, idx, end = false) ->
+  phrase = phrases[key]
+  for option in phrase.options
+    [subNodes, nextIdx] = tryOption(option, idx, end)
+    if nextIdx != -1 and (not end or nextIdx == inputStr.length)
+      return [subNodes, nextIdx]
+  return [null, -1]
 
-console.log(tryPhrase('_Program_', 0))
+console.log(JSON.stringify(tryASTPhrase('_Program_', 0, true), null, 2))

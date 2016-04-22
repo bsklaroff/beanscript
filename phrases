@@ -1,0 +1,895 @@
+{
+  "_Program_": {
+    "key": "_Program_",
+    "bnfOptions": [
+      "statements{statements[]}"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "statements",
+          "zeroOrMore": false,
+          "astChildKey": "statements",
+          "astChildIsArray": true,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  },
+  "statements": {
+    "key": "statements",
+    "bnfOptions": [
+      "(statement NEWLINE)* statement"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": null,
+          "zeroOrMore": true,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": true,
+          "subphrases": [
+            {
+              "phraseKey": "statement",
+              "zeroOrMore": false,
+              "astChildKey": null,
+              "astChildIsArray": false,
+              "astChildIsEmpty": false,
+              "isGroup": false,
+              "subphrases": null
+            },
+            {
+              "phraseKey": "NEWLINE",
+              "zeroOrMore": false,
+              "astChildKey": null,
+              "astChildIsArray": false,
+              "astChildIsEmpty": false,
+              "isGroup": false,
+              "subphrases": null
+            }
+          ]
+        },
+        {
+          "phraseKey": "statement",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  },
+  "statement": {
+    "key": "statement",
+    "bnfOptions": [
+      "_Assignment_",
+      "expr",
+      ""
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "_Assignment_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "expr",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      []
+    ]
+  },
+  "_Assignment_": {
+    "key": "_Assignment_",
+    "bnfOptions": [
+      "_Variable_{target} EQUALS expr{source}",
+      "_Variable_{target} EQUALS fnDef{source}"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "_Variable_",
+          "zeroOrMore": false,
+          "astChildKey": "target",
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "EQUALS",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "expr",
+          "zeroOrMore": false,
+          "astChildKey": "source",
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_Variable_",
+          "zeroOrMore": false,
+          "astChildKey": "target",
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "EQUALS",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "fnDef",
+          "zeroOrMore": false,
+          "astChildKey": "source",
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  },
+  "_Variable_": {
+    "key": "_Variable_",
+    "bnfOptions": [
+      "((_ID_ DOT)* _ID_){varNames[]}"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": null,
+          "zeroOrMore": false,
+          "astChildKey": "varNames",
+          "astChildIsArray": true,
+          "astChildIsEmpty": false,
+          "isGroup": true,
+          "subphrases": [
+            {
+              "phraseKey": null,
+              "zeroOrMore": true,
+              "astChildKey": null,
+              "astChildIsArray": false,
+              "astChildIsEmpty": false,
+              "isGroup": true,
+              "subphrases": [
+                {
+                  "phraseKey": "_ID_",
+                  "zeroOrMore": false,
+                  "astChildKey": null,
+                  "astChildIsArray": false,
+                  "astChildIsEmpty": false,
+                  "isGroup": false,
+                  "subphrases": null
+                },
+                {
+                  "phraseKey": "DOT",
+                  "zeroOrMore": false,
+                  "astChildKey": null,
+                  "astChildIsArray": false,
+                  "astChildIsEmpty": false,
+                  "isGroup": false,
+                  "subphrases": null
+                }
+              ]
+            },
+            {
+              "phraseKey": "_ID_",
+              "zeroOrMore": false,
+              "astChildKey": null,
+              "astChildIsArray": false,
+              "astChildIsEmpty": false,
+              "isGroup": false,
+              "subphrases": null
+            }
+          ]
+        }
+      ]
+    ]
+  },
+  "expr": {
+    "key": "expr",
+    "bnfOptions": [
+      "nonOpExpr",
+      "_OpExpression_"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "nonOpExpr",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_OpExpression_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  },
+  "nonOpExpr": {
+    "key": "nonOpExpr",
+    "bnfOptions": [
+      "LEFT_PAREN expr RIGHT_PAREN",
+      "_Variable_",
+      "_FunctionCall_",
+      "_String_",
+      "_NUMBER_"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "LEFT_PAREN",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "expr",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "RIGHT_PAREN",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_Variable_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_FunctionCall_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_String_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_NUMBER_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  },
+  "_OpExpression_": {
+    "key": "_OpExpression_",
+    "bnfOptions": [
+      "nonOpExpr{lhs} op{op} expr{rhs}"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "nonOpExpr",
+          "zeroOrMore": false,
+          "astChildKey": "lhs",
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "op",
+          "zeroOrMore": false,
+          "astChildKey": "op",
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "expr",
+          "zeroOrMore": false,
+          "astChildKey": "rhs",
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  },
+  "_FunctionCall_": {
+    "key": "_FunctionCall_",
+    "bnfOptions": [
+      "_Variable_{fnName} argList{argList[]}"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "_Variable_",
+          "zeroOrMore": false,
+          "astChildKey": "fnName",
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "argList",
+          "zeroOrMore": false,
+          "astChildKey": "argList",
+          "astChildIsArray": true,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  },
+  "argList": {
+    "key": "argList",
+    "bnfOptions": [
+      "LEFT_PAREN commaList RIGHT_PAREN"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "LEFT_PAREN",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "commaList",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "RIGHT_PAREN",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  },
+  "commaList": {
+    "key": "commaList",
+    "bnfOptions": [
+      "commaList0",
+      ""
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "commaList0",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      []
+    ]
+  },
+  "commaList0": {
+    "key": "commaList0",
+    "bnfOptions": [
+      "_ID_ COMMA NEWLINE* commaList0",
+      "_ID_"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "_ID_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "COMMA",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "NEWLINE",
+          "zeroOrMore": true,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "commaList0",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_ID_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  },
+  "op": {
+    "key": "op",
+    "bnfOptions": [
+      "_MOD_",
+      "_EXPONENT_",
+      "_TIMES_",
+      "_DIVDED_BY_",
+      "_PLUS_",
+      "_MINUS_"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "_MOD_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_EXPONENT_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_TIMES_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_DIVDED_BY_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_PLUS_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_MINUS_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  },
+  "_String_": {
+    "key": "_String_",
+    "bnfOptions": [
+      "SINGLE_QUOTE singleQuoteString{fragments[]} SINGLE_QUOTE",
+      "DOUBLE_QUOTE doubleQuoteString{fragments[]} DOUBLE_QUOTE"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "SINGLE_QUOTE",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "singleQuoteString",
+          "zeroOrMore": false,
+          "astChildKey": "fragments",
+          "astChildIsArray": true,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "SINGLE_QUOTE",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "DOUBLE_QUOTE",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "doubleQuoteString",
+          "zeroOrMore": false,
+          "astChildKey": "fragments",
+          "astChildIsArray": true,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "DOUBLE_QUOTE",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  },
+  "singleQuoteString": {
+    "key": "singleQuoteString",
+    "bnfOptions": [
+      "_ESCAPED_SINGLE_QUOTES_ singleQuoteString",
+      "_STRING_NO_SINGLE_QUOTE_ singleQuoteString",
+      ""
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "_ESCAPED_SINGLE_QUOTES_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "singleQuoteString",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_STRING_NO_SINGLE_QUOTE_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "singleQuoteString",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      []
+    ]
+  },
+  "doubleQuoteString": {
+    "key": "doubleQuoteString",
+    "bnfOptions": [
+      "_ESCAPED_DOUBLE_QUOTES_ doubleQuoteString",
+      "_STRING_NO_DOUBLE_QUOTE_ doubleQuoteString",
+      ""
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "_ESCAPED_DOUBLE_QUOTES_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "doubleQuoteString",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "_STRING_NO_DOUBLE_QUOTE_",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "doubleQuoteString",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      []
+    ]
+  },
+  "_FunctionDef_": {
+    "key": "_FunctionDef_",
+    "bnfOptions": [
+      "argList{args[]} fnDef0{body[]}",
+      "{args[]} fnDef0{body[]}"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "argList",
+          "zeroOrMore": false,
+          "astChildKey": "args",
+          "astChildIsArray": true,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "fnDef0",
+          "zeroOrMore": false,
+          "astChildKey": "body",
+          "astChildIsArray": true,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": null,
+          "zeroOrMore": false,
+          "astChildKey": "args",
+          "astChildIsArray": true,
+          "astChildIsEmpty": true,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "fnDef0",
+          "zeroOrMore": false,
+          "astChildKey": "body",
+          "astChildIsArray": true,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  },
+  "fnDef0": {
+    "key": "fnDef0",
+    "bnfOptions": [
+      "RIGHT_ARROW INDENT NEWLINE statements UNINDENT",
+      "RIGHT_ARROW statement"
+    ],
+    "options": [
+      [
+        {
+          "phraseKey": "RIGHT_ARROW",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "INDENT",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "NEWLINE",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "statements",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "UNINDENT",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ],
+      [
+        {
+          "phraseKey": "RIGHT_ARROW",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        },
+        {
+          "phraseKey": "statement",
+          "zeroOrMore": false,
+          "astChildKey": null,
+          "astChildIsArray": false,
+          "astChildIsEmpty": false,
+          "isGroup": false,
+          "subphrases": null
+        }
+      ]
+    ]
+  }
+}
