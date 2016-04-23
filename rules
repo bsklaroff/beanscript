@@ -1,221 +1,213 @@
 {
   "_Program_": {
-    "key": "_Program_",
-    "bnfOptions": [
-      "statements{statements[]}"
-    ],
-    "options": [
+    "name": "_Program_",
+    "isLiteral": false,
+    "isASTNode": true,
+    "patterns": [
       [
         {
-          "phraseKey": "statements",
+          "name": "statements",
           "zeroOrMore": false,
           "astChildKey": "statements",
           "astChildIsArray": true,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
   },
   "statements": {
-    "key": "statements",
-    "bnfOptions": [
-      "(statement NEWLINE)* statement"
-    ],
-    "options": [
+    "name": "statements",
+    "isLiteral": false,
+    "isASTNode": false,
+    "patterns": [
       [
         {
-          "phraseKey": null,
+          "name": null,
           "zeroOrMore": true,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": true,
-          "subphrases": [
+          "subsymbols": [
             {
-              "phraseKey": "statement",
+              "name": "statement",
               "zeroOrMore": false,
               "astChildKey": null,
               "astChildIsArray": false,
               "astChildIsEmpty": false,
               "isGroup": false,
-              "subphrases": null
+              "subsymbols": null
             },
             {
-              "phraseKey": "NEWLINE",
+              "name": "NEWLINE",
               "zeroOrMore": false,
               "astChildKey": null,
               "astChildIsArray": false,
               "astChildIsEmpty": false,
               "isGroup": false,
-              "subphrases": null
+              "subsymbols": null
             }
           ]
         },
         {
-          "phraseKey": "statement",
+          "name": "statement",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
   },
   "statement": {
-    "key": "statement",
-    "bnfOptions": [
-      "_Assignment_",
-      "expr",
-      ""
-    ],
-    "options": [
+    "name": "statement",
+    "isLiteral": false,
+    "isASTNode": false,
+    "patterns": [
       [
         {
-          "phraseKey": "_Assignment_",
+          "name": "_Assignment_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "expr",
+          "name": "expr",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       []
     ]
   },
   "_Assignment_": {
-    "key": "_Assignment_",
-    "bnfOptions": [
-      "_Variable_{target} EQUALS expr{source}",
-      "_Variable_{target} EQUALS fnDef{source}"
-    ],
-    "options": [
+    "name": "_Assignment_",
+    "isLiteral": false,
+    "isASTNode": true,
+    "patterns": [
       [
         {
-          "phraseKey": "_Variable_",
+          "name": "_Variable_",
           "zeroOrMore": false,
           "astChildKey": "target",
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "EQUALS",
+          "name": "EQUALS",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "expr",
+          "name": "expr",
           "zeroOrMore": false,
           "astChildKey": "source",
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_Variable_",
+          "name": "_Variable_",
           "zeroOrMore": false,
           "astChildKey": "target",
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "EQUALS",
+          "name": "EQUALS",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "fnDef",
+          "name": "fnDef",
           "zeroOrMore": false,
           "astChildKey": "source",
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
   },
   "_Variable_": {
-    "key": "_Variable_",
-    "bnfOptions": [
-      "((_ID_ DOT)* _ID_){varNames[]}"
-    ],
-    "options": [
+    "name": "_Variable_",
+    "isLiteral": false,
+    "isASTNode": true,
+    "patterns": [
       [
         {
-          "phraseKey": null,
+          "name": null,
           "zeroOrMore": false,
           "astChildKey": "varNames",
           "astChildIsArray": true,
           "astChildIsEmpty": false,
           "isGroup": true,
-          "subphrases": [
+          "subsymbols": [
             {
-              "phraseKey": null,
+              "name": null,
               "zeroOrMore": true,
               "astChildKey": null,
               "astChildIsArray": false,
               "astChildIsEmpty": false,
               "isGroup": true,
-              "subphrases": [
+              "subsymbols": [
                 {
-                  "phraseKey": "_ID_",
+                  "name": "_ID_",
                   "zeroOrMore": false,
                   "astChildKey": null,
                   "astChildIsArray": false,
                   "astChildIsEmpty": false,
                   "isGroup": false,
-                  "subphrases": null
+                  "subsymbols": null
                 },
                 {
-                  "phraseKey": "DOT",
+                  "name": "DOT",
                   "zeroOrMore": false,
                   "astChildKey": null,
                   "astChildIsArray": false,
                   "astChildIsEmpty": false,
                   "isGroup": false,
-                  "subphrases": null
+                  "subsymbols": null
                 }
               ]
             },
             {
-              "phraseKey": "_ID_",
+              "name": "_ID_",
               "zeroOrMore": false,
               "astChildKey": null,
               "astChildIsArray": false,
               "astChildIsEmpty": false,
               "isGroup": false,
-              "subphrases": null
+              "subsymbols": null
             }
           ]
         }
@@ -223,673 +215,773 @@
     ]
   },
   "expr": {
-    "key": "expr",
-    "bnfOptions": [
-      "nonOpExpr",
-      "_OpExpression_"
-    ],
-    "options": [
+    "name": "expr",
+    "isLiteral": false,
+    "isASTNode": false,
+    "patterns": [
       [
         {
-          "phraseKey": "nonOpExpr",
+          "name": "nonOpExpr",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_OpExpression_",
+          "name": "_OpExpression_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
   },
   "nonOpExpr": {
-    "key": "nonOpExpr",
-    "bnfOptions": [
-      "LEFT_PAREN expr RIGHT_PAREN",
-      "_Variable_",
-      "_FunctionCall_",
-      "_String_",
-      "_NUMBER_"
-    ],
-    "options": [
+    "name": "nonOpExpr",
+    "isLiteral": false,
+    "isASTNode": false,
+    "patterns": [
       [
         {
-          "phraseKey": "LEFT_PAREN",
+          "name": "LEFT_PAREN",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "expr",
+          "name": "expr",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "RIGHT_PAREN",
+          "name": "RIGHT_PAREN",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_Variable_",
+          "name": "_FunctionCall_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_FunctionCall_",
+          "name": "_Variable_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_String_",
+          "name": "_String_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_NUMBER_",
+          "name": "_NUMBER_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
   },
   "_OpExpression_": {
-    "key": "_OpExpression_",
-    "bnfOptions": [
-      "nonOpExpr{lhs} op{op} expr{rhs}"
-    ],
-    "options": [
+    "name": "_OpExpression_",
+    "isLiteral": false,
+    "isASTNode": true,
+    "patterns": [
       [
         {
-          "phraseKey": "nonOpExpr",
+          "name": "nonOpExpr",
           "zeroOrMore": false,
           "astChildKey": "lhs",
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "op",
+          "name": "op",
           "zeroOrMore": false,
           "astChildKey": "op",
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "expr",
+          "name": "expr",
           "zeroOrMore": false,
           "astChildKey": "rhs",
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
   },
   "_FunctionCall_": {
-    "key": "_FunctionCall_",
-    "bnfOptions": [
-      "_Variable_{fnName} argList{argList[]}"
-    ],
-    "options": [
+    "name": "_FunctionCall_",
+    "isLiteral": false,
+    "isASTNode": true,
+    "patterns": [
       [
         {
-          "phraseKey": "_Variable_",
+          "name": "_Variable_",
           "zeroOrMore": false,
           "astChildKey": "fnName",
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "argList",
+          "name": "argList",
           "zeroOrMore": false,
           "astChildKey": "argList",
           "astChildIsArray": true,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
   },
   "argList": {
-    "key": "argList",
-    "bnfOptions": [
-      "LEFT_PAREN commaList RIGHT_PAREN"
-    ],
-    "options": [
+    "name": "argList",
+    "isLiteral": false,
+    "isASTNode": false,
+    "patterns": [
       [
         {
-          "phraseKey": "LEFT_PAREN",
+          "name": "LEFT_PAREN",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "commaList",
+          "name": "commaList",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "RIGHT_PAREN",
+          "name": "RIGHT_PAREN",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
   },
   "commaList": {
-    "key": "commaList",
-    "bnfOptions": [
-      "commaList0",
-      ""
-    ],
-    "options": [
+    "name": "commaList",
+    "isLiteral": false,
+    "isASTNode": false,
+    "patterns": [
       [
         {
-          "phraseKey": "commaList0",
+          "name": "commaList0",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       []
     ]
   },
   "commaList0": {
-    "key": "commaList0",
-    "bnfOptions": [
-      "_ID_ COMMA NEWLINE* commaList0",
-      "_ID_"
-    ],
-    "options": [
+    "name": "commaList0",
+    "isLiteral": false,
+    "isASTNode": false,
+    "patterns": [
       [
         {
-          "phraseKey": "_ID_",
+          "name": "_ID_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "COMMA",
+          "name": "COMMA",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "NEWLINE",
+          "name": "NEWLINE",
           "zeroOrMore": true,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "commaList0",
+          "name": "commaList0",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_ID_",
+          "name": "_ID_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
   },
   "op": {
-    "key": "op",
-    "bnfOptions": [
-      "_MOD_",
-      "_EXPONENT_",
-      "_TIMES_",
-      "_DIVDED_BY_",
-      "_PLUS_",
-      "_MINUS_"
-    ],
-    "options": [
+    "name": "op",
+    "isLiteral": false,
+    "isASTNode": false,
+    "patterns": [
       [
         {
-          "phraseKey": "_MOD_",
+          "name": "_MOD_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_EXPONENT_",
+          "name": "_EXPONENT_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_TIMES_",
+          "name": "_TIMES_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_DIVDED_BY_",
+          "name": "_DIVDED_BY_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_PLUS_",
+          "name": "_PLUS_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_MINUS_",
+          "name": "_MINUS_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
   },
   "_String_": {
-    "key": "_String_",
-    "bnfOptions": [
-      "SINGLE_QUOTE singleQuoteString{fragments[]} SINGLE_QUOTE",
-      "DOUBLE_QUOTE doubleQuoteString{fragments[]} DOUBLE_QUOTE"
-    ],
-    "options": [
+    "name": "_String_",
+    "isLiteral": false,
+    "isASTNode": true,
+    "patterns": [
       [
         {
-          "phraseKey": "SINGLE_QUOTE",
+          "name": "SINGLE_QUOTE",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "singleQuoteString",
+          "name": "singleQuoteString",
           "zeroOrMore": false,
           "astChildKey": "fragments",
           "astChildIsArray": true,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "SINGLE_QUOTE",
+          "name": "SINGLE_QUOTE",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "DOUBLE_QUOTE",
+          "name": "DOUBLE_QUOTE",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "doubleQuoteString",
+          "name": "doubleQuoteString",
           "zeroOrMore": false,
           "astChildKey": "fragments",
           "astChildIsArray": true,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "DOUBLE_QUOTE",
+          "name": "DOUBLE_QUOTE",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
   },
   "singleQuoteString": {
-    "key": "singleQuoteString",
-    "bnfOptions": [
-      "_ESCAPED_SINGLE_QUOTES_ singleQuoteString",
-      "_STRING_NO_SINGLE_QUOTE_ singleQuoteString",
-      ""
-    ],
-    "options": [
+    "name": "singleQuoteString",
+    "isLiteral": false,
+    "isASTNode": false,
+    "patterns": [
       [
         {
-          "phraseKey": "_ESCAPED_SINGLE_QUOTES_",
+          "name": "_ESCAPED_SINGLE_QUOTES_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "singleQuoteString",
+          "name": "singleQuoteString",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_STRING_NO_SINGLE_QUOTE_",
+          "name": "_STRING_NO_SINGLE_QUOTE_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "singleQuoteString",
+          "name": "singleQuoteString",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       []
     ]
   },
   "doubleQuoteString": {
-    "key": "doubleQuoteString",
-    "bnfOptions": [
-      "_ESCAPED_DOUBLE_QUOTES_ doubleQuoteString",
-      "_STRING_NO_DOUBLE_QUOTE_ doubleQuoteString",
-      ""
-    ],
-    "options": [
+    "name": "doubleQuoteString",
+    "isLiteral": false,
+    "isASTNode": false,
+    "patterns": [
       [
         {
-          "phraseKey": "_ESCAPED_DOUBLE_QUOTES_",
+          "name": "_ESCAPED_DOUBLE_QUOTES_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "doubleQuoteString",
+          "name": "doubleQuoteString",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "_STRING_NO_DOUBLE_QUOTE_",
+          "name": "_STRING_NO_DOUBLE_QUOTE_",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "doubleQuoteString",
+          "name": "doubleQuoteString",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       []
     ]
   },
   "_FunctionDef_": {
-    "key": "_FunctionDef_",
-    "bnfOptions": [
-      "argList{args[]} fnDef0{body[]}",
-      "{args[]} fnDef0{body[]}"
-    ],
-    "options": [
+    "name": "_FunctionDef_",
+    "isLiteral": false,
+    "isASTNode": true,
+    "patterns": [
       [
         {
-          "phraseKey": "argList",
+          "name": "argList",
           "zeroOrMore": false,
           "astChildKey": "args",
           "astChildIsArray": true,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "fnDef0",
+          "name": "fnDef0",
           "zeroOrMore": false,
           "astChildKey": "body",
           "astChildIsArray": true,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": null,
+          "name": null,
           "zeroOrMore": false,
           "astChildKey": "args",
           "astChildIsArray": true,
           "astChildIsEmpty": true,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "fnDef0",
+          "name": "fnDef0",
           "zeroOrMore": false,
           "astChildKey": "body",
           "astChildIsArray": true,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
   },
   "fnDef0": {
-    "key": "fnDef0",
-    "bnfOptions": [
-      "RIGHT_ARROW INDENT NEWLINE statements UNINDENT",
-      "RIGHT_ARROW statement"
-    ],
-    "options": [
+    "name": "fnDef0",
+    "isLiteral": false,
+    "isASTNode": false,
+    "patterns": [
       [
         {
-          "phraseKey": "RIGHT_ARROW",
+          "name": "RIGHT_ARROW",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "INDENT",
+          "name": "INDENT",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "NEWLINE",
+          "name": "NEWLINE",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "statements",
+          "name": "statements",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "UNINDENT",
+          "name": "UNINDENT",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ],
       [
         {
-          "phraseKey": "RIGHT_ARROW",
+          "name": "RIGHT_ARROW",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         },
         {
-          "phraseKey": "statement",
+          "name": "statement",
           "zeroOrMore": false,
           "astChildKey": null,
           "astChildIsArray": false,
           "astChildIsEmpty": false,
           "isGroup": false,
-          "subphrases": null
+          "subsymbols": null
         }
       ]
     ]
+  },
+  "NEWLINE": {
+    "name": "NEWLINE",
+    "isLiteral": true,
+    "isASTNode": false,
+    "regex": "\n"
+  },
+  "WHITESPACE": {
+    "name": "WHITESPACE",
+    "isLiteral": true,
+    "isASTNode": false,
+    "regex": "[ \t\r]+"
+  },
+  "EQUALS": {
+    "name": "EQUALS",
+    "isLiteral": true,
+    "isASTNode": false,
+    "regex": "="
+  },
+  "DOT": {
+    "name": "DOT",
+    "isLiteral": true,
+    "isASTNode": false,
+    "regex": "\\."
+  },
+  "_ID_": {
+    "name": "_ID_",
+    "isLiteral": true,
+    "isASTNode": true,
+    "regex": "[_a-zA-Z][_a-zA-Z0-9]*"
+  },
+  "_NUMBER_": {
+    "name": "_NUMBER_",
+    "isLiteral": true,
+    "isASTNode": true,
+    "regex": "[1-9][0-9]+(.[0-9]+)?"
+  },
+  "LEFT_PAREN": {
+    "name": "LEFT_PAREN",
+    "isLiteral": true,
+    "isASTNode": false,
+    "regex": "\\("
+  },
+  "RIGHT_PAREN": {
+    "name": "RIGHT_PAREN",
+    "isLiteral": true,
+    "isASTNode": false,
+    "regex": "\\)"
+  },
+  "COMMA": {
+    "name": "COMMA",
+    "isLiteral": true,
+    "isASTNode": false,
+    "regex": ","
+  },
+  "_MOD_": {
+    "name": "_MOD_",
+    "isLiteral": true,
+    "isASTNode": true,
+    "regex": "%"
+  },
+  "_EXPONENT_": {
+    "name": "_EXPONENT_",
+    "isLiteral": true,
+    "isASTNode": true,
+    "regex": "\\*\\*"
+  },
+  "_TIMES_": {
+    "name": "_TIMES_",
+    "isLiteral": true,
+    "isASTNode": true,
+    "regex": "\\*"
+  },
+  "_DIVIDED_BY_": {
+    "name": "_DIVIDED_BY_",
+    "isLiteral": true,
+    "isASTNode": true,
+    "regex": "'"
+  },
+  "_PLUS_": {
+    "name": "_PLUS_",
+    "isLiteral": true,
+    "isASTNode": true,
+    "regex": "\\+"
+  },
+  "_MINUS_": {
+    "name": "_MINUS_",
+    "isLiteral": true,
+    "isASTNode": true,
+    "regex": "-"
+  },
+  "SINGLE_QUOTE": {
+    "name": "SINGLE_QUOTE",
+    "isLiteral": true,
+    "isASTNode": false,
+    "regex": "'"
+  },
+  "DOUBLE_QUOTE": {
+    "name": "DOUBLE_QUOTE",
+    "isLiteral": true,
+    "isASTNode": false,
+    "regex": "\""
+  },
+  "_ESCAPED_SINGLE_QUOTES_": {
+    "name": "_ESCAPED_SINGLE_QUOTES_",
+    "isLiteral": true,
+    "isASTNode": true,
+    "regex": "\\'+"
+  },
+  "_STRING_NO_SINGLE_QUOTE_": {
+    "name": "_STRING_NO_SINGLE_QUOTE_",
+    "isLiteral": true,
+    "isASTNode": true,
+    "regex": "[^']+"
+  },
+  "_ESCAPED_DOUBLE_QUOTES_": {
+    "name": "_ESCAPED_DOUBLE_QUOTES_",
+    "isLiteral": true,
+    "isASTNode": true,
+    "regex": "\\\"+"
+  },
+  "_STRING_NO_DOUBLE_QUOTE_": {
+    "name": "_STRING_NO_DOUBLE_QUOTE_",
+    "isLiteral": true,
+    "isASTNode": true,
+    "regex": "[^\"]+"
+  },
+  "RIGHT_ARROW": {
+    "name": "RIGHT_ARROW",
+    "isLiteral": true,
+    "isASTNode": false,
+    "regex": "->"
   }
 }
