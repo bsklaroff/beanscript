@@ -6,22 +6,27 @@ BNF = {
     '(statement NEWLINE)* statement'
   ]
   statement: [
+    '_Return_'
     '_Assignment_'
     'expr'
     ''
   ]
 
+  _Return_: [
+    'RETURN expr{returnVal}'
+  ]
+
   _Assignment_: [
+    '_Variable_{target} EQUALS _FunctionDef_{source}'
     '_Variable_{target} EQUALS expr{source}'
-    '_Variable_{target} EQUALS fnDef{source}'
   ]
   _Variable_: [
     '((_ID_ DOT)* _ID_){varNames[]}'
   ]
 
   expr: [
-    'nonOpExpr'
     '_OpExpression_'
+    'nonOpExpr'
   ]
 
   nonOpExpr: [
@@ -33,30 +38,35 @@ BNF = {
   ]
   _OpExpression_: [
     'nonOpExpr{lhs} op{op} expr{rhs}'
+    '_EMPTY_{lhs} _NOT_{op} expr{rhs}'
   ]
 
   _FunctionCall_: [
     '_Variable_{fnName} argList{argList[]}'
   ]
   argList: [
-    'LEFT_PAREN commaList RIGHT_PAREN'
+    'LEFT_PAREN argListInner RIGHT_PAREN'
   ]
-  commaList: [
-    'commaList0'
+  argListInner: [
+    'argListInner0'
     ''
   ]
-  commaList0: [
-    '_ID_ COMMA NEWLINE* commaList0'
-    '_ID_'
+  argListInner0: [
+    'expr COMMA argListInner0'
+    'expr'
   ]
 
   op: [
     '_MOD_'
     '_EXPONENT_'
     '_TIMES_'
-    '_DIVDED_BY_'
+    '_DIVIDED_BY_'
     '_PLUS_'
     '_MINUS_'
+    '_AND_'
+    '_OR_'
+    '_EQUALS_EQUALS_'
+    '_NOT_EQUALS_'
   ]
 
   _String_: [
@@ -75,36 +85,57 @@ BNF = {
   ]
 
   _FunctionDef_: [
-    'argList{args[]} fnDef0{body[]}'
-    '{args[]} fnDef0{body[]}'
+    'argDefList{args[]} fnDef0{body[]}'
+    '_EMPTY_{args[]} fnDef0{body[]}'
   ]
+  argDefList: [
+    'LEFT_PAREN argDefListInner RIGHT_PAREN'
+  ]
+  argDefListInner: [
+    'argDefListInner0'
+    ''
+  ]
+  argDefListInner0: [
+    '_ID_ COMMA argDefListInner0'
+    '_ID_'
+  ]
+
   fnDef0: [
     'RIGHT_ARROW INDENT NEWLINE statements UNINDENT'
     'RIGHT_ARROW statement'
   ]
 
-  NEWLINE: '\n'
-  WHITESPACE: '[ \t\r]+'
+  NEWLINE: '[ \t\n]*\n'
+  WHITESPACE: '[ \t]*'
+  RETURN: 'return'
   EQUALS: '='
   DOT: '\\.'
   _ID_: '[_a-zA-Z][_a-zA-Z0-9]*'
-  _NUMBER_: '[1-9][0-9]+(\.[0-9]+)?'
+  _NUMBER_: '[1-9][0-9]*(\\.[0-9]*)?'
   LEFT_PAREN: '\\('
   RIGHT_PAREN: '\\)'
   COMMA: ','
   _MOD_: '%'
   _EXPONENT_: '\\*\\*'
   _TIMES_: '\\*'
-  _DIVIDED_BY_: '\''
+  _DIVIDED_BY_: '/'
   _PLUS_: '\\+'
   _MINUS_: '-'
+  _AND_: 'and'
+  _OR_: 'or'
+  _EQUALS_EQUALS_: '=='
+  _NOT_EQUALS_: '!='
+  _NOT_: 'not'
   SINGLE_QUOTE: "'"
   DOUBLE_QUOTE: '"'
-  _ESCAPED_SINGLE_QUOTES_: "\\'+"
+  _ESCAPED_SINGLE_QUOTES_: "\\\\'+"
   _STRING_NO_SINGLE_QUOTE_: "[^']+"
-  _ESCAPED_DOUBLE_QUOTES_: '\\"+'
+  _ESCAPED_DOUBLE_QUOTES_: '\\\\"+'
   _STRING_NO_DOUBLE_QUOTE_: '[^"]+'
   RIGHT_ARROW: '->'
+  INDENT: ''
+  UNINDENT: ''
+  _EMPTY_: ''
 }
 
 class BNFRule

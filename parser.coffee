@@ -2,11 +2,17 @@ ASTNode = require('./ast_node')
 bnfRules = require('./bnf_rules')
 
 class Parser
+  SPACES_PER_INDENT = 2
+
   constructor: (@inputString) ->
+    @indentLevel = 0
     @astTree = null
     return
 
-  parse: -> @astTree = @tryRule(bnfRules._Program_, 0, true)[0]
+  parse: ->
+    @indentLevel = 0
+    @astTree = @tryRule(bnfRules._Program_, 0, true)[0]
+    return
 
   tryRule: (rule, idx, end = false) ->
     if rule.isLiteral
@@ -15,6 +21,16 @@ class Parser
         nextIdx = idx + literalMatch[0].length
         if rule.isASTNode
           return [new ASTNode(rule.name, literalMatch[0]), nextIdx]
+        else if rule.name == 'INDENT'
+          @indentLevel++
+        else if rule.name == 'UNINDENT'
+          @indentLevel--
+        else if rule.name == 'NEWLINE'
+          # Parse next line's indentation with this line
+          [whitespace, postIndentIdx] = @tryRule(bnfRules.WHITESPACE, nextIdx)
+          if postIndentIdx != nextIdx + @indentLevel * SPACES_PER_INDENT
+            return [null, -1]
+          nextIdx = postIndentIdx
         return [null, nextIdx]
     else if rule.isASTNode
       for pattern in rule.patterns
@@ -32,6 +48,7 @@ class Parser
     return [null, -1]
 
   tryPattern: (pattern, idx, end = false) ->
+    savedIndentLevel = @indentLevel
     symbolIdx = 0
     childrenObj = null
     childrenArr = []
@@ -42,15 +59,12 @@ class Parser
       if symbol.astChildKey?
         childrenObj ?= {}
       # Ignore whitespace
-      [whitespace, nextIdx] = @tryRule(bnfRules.WHITESPACE, idx)
-      if nextIdx != -1
-        idx = nextIdx
+      [whitespace, idx] = @tryRule(bnfRules.WHITESPACE, idx)
       # Attempt to match parenthesized subgroup
       if symbol.isGroup
         # We know this will return an array because symbol.subsymbols is not an ast node pattern
         [patternResult, nextIdx] = @tryPattern(symbol.subsymbols, idx, lastToken)
         @updateChildren(patternResult, symbol, childrenObj, childrenArr)
-      # TODO: match an empty ast child
       # Attempt to match rule token
       else
         [ruleResult, nextIdx] = @tryRule(bnfRules[symbol.name], idx, lastToken)
@@ -63,6 +77,7 @@ class Parser
           idx = nextIdx
       # If this symbol has no STAR and we didn't match, return -1
       else if nextIdx == -1
+        @indentLevel = savedIndentLevel
         return [null, -1]
       # If this symbol has no STAR and we matched, move forward one symbol
       else
@@ -80,25 +95,32 @@ class Parser
     # Do nothing if we found no result
     if not res?
       return
-    # Case 1: res is an ast node
-    if res.name?
-      # Case a: we are parsing the pattern for an ast node
-      if symbol.astChildKey?
-        childrenObj[symbol.astChildKey] = res
-      # Case b: we are parsing the pattern for a non-ast node
-      else
-        childrenArr.push(res)
-    # Case 2: res is an array of ast nodes
-    else if res.length?
-      # Case a: we are parsing the pattern for an ast node
-      if symbol.astChildKey?
+    # Case 1: we are parsing the pattern for an ast node
+    if symbol.astChildKey?
+      # Case 1a: ast child is an array
+      if symbol.astChildIsArray
+        if res.name? or not res.length?
+          throw new Error("Result #{res} should be an array of nodes")
         childrenObj[symbol.astChildKey] ?= []
         for subNode in res
           childrenObj[symbol.astChildKey].push(subNode)
-      # Case b: we are parsing the pattern for a non-ast node
+      # Case 1b: ast child is an ast node, and res is an ast node
+      else if res.name?
+        childrenObj[symbol.astChildKey] = res
+      # Case 1c: ast child is an ast node, and res is an array of ast nodes
+      else if res.length?
+        if res.length != 1
+          throw new Error("Result #{res} should have exactly one element")
+        childrenObj[symbol.astChildKey] = res[0]
       else
-        for subNode in res
-          childrenArr.push(subNode)
+        throw new Error("Result #{res} is neither an ast node nor an array of nodes")
+    # Case 2a: we are parsing the pattern for a non-ast node, and res is an ast node
+    else if res.name?
+      childrenArr.push(res)
+    # Case 2b: we are parsing the pattern for a non-ast node, and res is an array of ast nodes
+    else if res.length?
+      for subNode in res
+        childrenArr.push(subNode)
     else
       throw new Error("Result #{res} is neither an ast node nor an array of nodes")
     return

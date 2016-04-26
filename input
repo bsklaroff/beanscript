@@ -1,3 +1,4 @@
-x = 23
-console.log(x)
-y = 47
+console.log('start')
+b = (n) ->
+  return n ** n
+console.log(b(23))
