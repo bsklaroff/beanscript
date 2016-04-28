@@ -1,4 +1,4 @@
-Parser = require('./parser')
+Parser = require('./src/parser')
 
 fs = require('fs')
 inputStr = fs.readFileSync(process.argv[2]).toString()
