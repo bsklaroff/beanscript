@@ -97,17 +97,22 @@ class Parser
       return
     # Case 1: we are parsing the pattern for an ast node
     if symbol.astChildKey?
-      # Case 1a: ast child is an array
-      if symbol.astChildIsArray
+      # Case 1a: ast child is an empty array
+      if symbol.astChildIsArray and res.name == '_EMPTY_'
+        if childrenObj[symbol.astChildKey]?
+          throw new Error("Unexpected empty child array: #{JSON.stringify(res)}")
+        childrenObj[symbol.astChildKey] = []
+      # Case 1b: ast child is an array
+      else if symbol.astChildIsArray
         if res.name? or not res.length?
-          throw new Error("Result #{res} should be an array of nodes")
+          throw new Error("Result #{JSON.stringify(res)} should be an array of nodes")
         childrenObj[symbol.astChildKey] ?= []
         for subNode in res
           childrenObj[symbol.astChildKey].push(subNode)
-      # Case 1b: ast child is an ast node, and res is an ast node
+      # Case 1c: ast child is an ast node, and res is an ast node
       else if res.name?
         childrenObj[symbol.astChildKey] = res
-      # Case 1c: ast child is an ast node, and res is an array of ast nodes
+      # Case 1d: ast child is an ast node, and res is an array of ast nodes
       else if res.length?
         if res.length != 1
           throw new Error("Result #{res} should have exactly one element")

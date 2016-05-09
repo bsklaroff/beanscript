@@ -1,4 +1,5 @@
-console.log('start')
-b = (n) ->
-  return n ** n
-console.log(b(23))
+fib = (n) ->
+  if n == 0 or n == 1
+    return 1
+  return fib(n - 1) + fib(n - 2)
+console.log(fib(5))

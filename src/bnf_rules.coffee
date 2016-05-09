@@ -7,6 +7,7 @@ BNF = {
   ]
   statement: [
     '_Return_'
+    '_If_'
     '_Assignment_'
     'expr'
     ''
@@ -14,6 +15,21 @@ BNF = {
 
   _Return_: [
     'RETURN expr{returnVal}'
+  ]
+
+  _If_: [
+    'IF expr{condition} INDENT NEWLINE statements{body[]} UNINDENT maybeElse{else}'
+  ]
+  _ElseIf_: [
+    'ELSE IF expr{condition} INDENT NEWLINE statements{body[]} UNINDENT maybeElse{else}'
+  ]
+  _Else_: [
+    'ELSE INDENT NEWLINE statements{body[]} UNINDENT'
+  ]
+  maybeElse: [
+    '_ElseIf_'
+    '_Else_'
+    '_EMPTY_'
   ]
 
   _Assignment_: [
@@ -108,10 +124,12 @@ BNF = {
   NEWLINE: '[ \t\n]*\n'
   WHITESPACE: '[ \t]*'
   RETURN: 'return'
+  IF: 'if'
+  ELSE: 'else'
   EQUALS: '='
   DOT: '\\.'
   _ID_: '[_a-zA-Z][_a-zA-Z0-9]*'
-  _NUMBER_: '[1-9][0-9]*(\\.[0-9]*)?'
+  _NUMBER_: '[0-9]+(\\.[0-9]*)?'
   LEFT_PAREN: '\\('
   RIGHT_PAREN: '\\)'
   COMMA: ','
@@ -202,7 +220,6 @@ class BNFRule
         zeroOrMore: false
         astChildKey: null
         astChildIsArray: false
-        astChildIsEmpty: false
         isGroup: false
         subsymbols: null
       [ruleTokenName, ruleTokenVal] = @_getNextRuleToken()
@@ -211,9 +228,6 @@ class BNFRule
       else if ruleTokenName == 'ID'
         wipSymbol.name = ruleTokenVal
         foundRightParen = @_parseSymbolSuffix(wipSymbol)
-      else if ruleTokenName == 'LEFT_CURLY_BRACE'
-        wipSymbol.astChildIsEmpty = true
-        @_parseASTChild(wipSymbol)
       else if ruleTokenName == 'LEFT_PAREN'
         @parenDepth++
         wipSymbol.isGroup = true
