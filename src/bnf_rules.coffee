@@ -45,6 +45,10 @@ BNF = {
     'nonOpExpr'
   ]
 
+  _OpExpression_: [
+    'nonOpExpr{lhs} op{op} expr{rhs}'
+    '_EMPTY_{lhs} _NOT_{op} expr{rhs}'
+  ]
   nonOpExpr: [
     'LEFT_PAREN expr RIGHT_PAREN'
     '_FunctionCall_'
@@ -52,9 +56,18 @@ BNF = {
     '_String_'
     '_NUMBER_'
   ]
-  _OpExpression_: [
-    'nonOpExpr{lhs} op{op} expr{rhs}'
-    '_EMPTY_{lhs} _NOT_{op} expr{rhs}'
+
+  op: [
+    '_EXPONENT_'
+    '_MOD_'
+    '_TIMES_'
+    '_DIVIDED_BY_'
+    '_PLUS_'
+    '_MINUS_'
+    '_EQUALS_EQUALS_'
+    '_NOT_EQUALS_'
+    '_AND_'
+    '_OR_'
   ]
 
   _FunctionCall_: [
@@ -70,19 +83,6 @@ BNF = {
   argListInner0: [
     'expr COMMA argListInner0'
     'expr'
-  ]
-
-  op: [
-    '_MOD_'
-    '_EXPONENT_'
-    '_TIMES_'
-    '_DIVIDED_BY_'
-    '_PLUS_'
-    '_MINUS_'
-    '_AND_'
-    '_OR_'
-    '_EQUALS_EQUALS_'
-    '_NOT_EQUALS_'
   ]
 
   _String_: [

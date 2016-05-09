@@ -1,5 +1,6 @@
 ASTNode = require('./ast_node')
 bnfRules = require('./bnf_rules')
+fixOpPrecedence = require('./fix_op_precedence')
 
 class Parser
   SPACES_PER_INDENT = 2
@@ -12,6 +13,7 @@ class Parser
   parse: ->
     @indentLevel = 0
     @astTree = @tryRule(bnfRules._Program_, 0, true)[0]
+    @astTree = fixOpPrecedence(@astTree)
     return
 
   tryRule: (rule, idx, end = false) ->
