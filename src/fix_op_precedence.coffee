@@ -56,7 +56,7 @@ makeOpTree = (operators, operands, precedenceIdx) ->
   return makeOpTree(operators, operands, precedenceIdx + 1)
 
 makeOpNode = (operator, lhs, rhs) ->
-  opNode = new ASTNode(OP_EXPRESSION_NAME)
+  opNode = ASTNode.make(OP_EXPRESSION_NAME)
   opNode.children =
     lhs: lhs
     op: operator
