@@ -33,17 +33,29 @@ class FunctionCallNode extends ASTNode
     wast += ')'
     return wast
 
-class NumberNode extends ASTNode
-  genWast: -> "(i32.const #{@literal})"
+class OpExpressionNode extends ASTNode
+  genWast: ->
+    lhsWast = @children.lhs.genWast()
+    rhsWast = @children.rhs.genWast()
+    opWast = @children.op.genWast()
+    wast = "(#{opWast} #{lhsWast} #{rhsWast})"
 
 # TODO: handle dot object accesses
 class VariableNode extends ASTNode
   genWast: -> @children.varNames[0].literal
 
+class PlusNode extends ASTNode
+  genWast: -> 'i32.add'
+
+class NumberNode extends ASTNode
+  genWast: -> "(i32.const #{@literal})"
+
 TYPES =
   _Program_: ProgramNode
   _FunctionCall_: FunctionCallNode
-  _NUMBER_: NumberNode
+  _OpExpression_: OpExpressionNode
   _Variable_: VariableNode
+  _NUMBER_: NumberNode
+  _PLUS_: PlusNode
 
 module.exports = ASTNode
