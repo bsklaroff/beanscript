@@ -1,2 +1,11 @@
-a = 34 * 2
-print_i64(a)
+u = (n) ->
+  sum = 0
+  next = 1
+  mult = 1
+  for i in [0..10]
+    sum = sum + (mult * base)
+    next = next * n
+    mult = -mult
+  return sum
+
+print_i64(u(1))

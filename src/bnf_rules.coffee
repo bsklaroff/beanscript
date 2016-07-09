@@ -8,6 +8,7 @@ BNF = {
   statement: [
     '_Return_'
     '_If_'
+    '_FunctionAssignment_'
     '_Assignment_'
     'expr'
     ''
@@ -32,8 +33,10 @@ BNF = {
     '_EMPTY_'
   ]
 
-  _Assignment_: [
+  _FunctionAssignment_: [
     '_ID_{target} EQUALS _FunctionDef_{source}'
+  ]
+  _Assignment_: [
     '_ID_{target} EQUALS expr{source}'
   ]
   _Variable_: [
@@ -48,9 +51,13 @@ BNF = {
   _OpExpression_: [
     'nonOpExpr{lhs} op{op} expr{rhs}'
     '_EMPTY_{lhs} _NOT_{op} expr{rhs}'
+    '_EMPTY_{lhs} _MINUS_{op} expr{rhs}'
+  ]
+  _OpParenGroup_: [
+    'LEFT_PAREN _OpExpression_{opExpr} RIGHT_PAREN'
   ]
   nonOpExpr: [
-    'LEFT_PAREN expr RIGHT_PAREN'
+    '_OpParenGroup_'
     '_FunctionCall_'
     '_Variable_'
     '_String_'

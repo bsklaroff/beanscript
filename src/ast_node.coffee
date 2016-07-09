@@ -1,4 +1,34 @@
 class ASTNode
+  @findLocalVars: (children) ->
+    varNames = []
+    for name, child of children
+      if child.length > 0
+        for subchild in child
+          if subchild.name == '_Assignment_'
+            varNames.push(subchild.children.target.literal)
+          else if subchild.name != '_FunctionAssignment_'
+            varNames = varNames.concat(ASTNode.findLocalVars(subchild.children))
+      else
+        if child.name == '_Assignment_'
+          varNames.push(child.children.target.literal)
+        else if child.name != '_FunctionAssignment_'
+          varNames = varNames.concat(ASTNode.findLocalVars(child.children))
+    return varNames
+
+  @findFnAssignments: (children) ->
+    fnAssignments = []
+    for name, child of children
+      if child.length > 0
+        for subchild in child
+          if subchild.name == '_FunctionAssignment_'
+            fnAssignments.push(subchild)
+          fnAssignments = fnAssignments.concat(ASTNode.findFnAssignments(subchild.children))
+      else
+        if child.name == '_FunctionAssignment_'
+          fnAssignments.push(child)
+        fnAssignments = fnAssignments.concat(ASTNode.findFnAssignments(child.children))
+    return fnAssignments
+
   @make: (name, literal) ->
     if name of TYPES
       return new TYPES[name](name, literal)
@@ -11,29 +41,18 @@ class ASTNode
   genWast: -> ''
 
 class ProgramNode extends ASTNode
-  _findLocalVars: (children) ->
-    varNames = []
-    for name, child of children
-      if child.length > 0
-        for subchild in child
-          if subchild.name == '_Variable_'
-            varNames.push(subchild.children.id.literal)
-          varNames = varNames.concat(@_findLocalVars(subchild.children))
-      else
-        if child.name == '_Variable_'
-          varNames.push(child.children.id.literal)
-        varNames = varNames.concat(@_findLocalVars(child.children))
-    return varNames
-
   genWast: ->
     wast = '(module\n'
     wast += '  (import $print_i64 "stdio" "print" (param i64))\n'
     wast += '  (func\n'
-    for varName in @_findLocalVars(@children)
+    for varName in ASTNode.findLocalVars(@children)
       wast += "    (local $#{varName} i64)\n"
     for statement in @children.statements
-      wast += "    #{statement.genWast()}\n"
+      if statement.name != '_FunctionAssignment_'
+        wast += "    #{statement.genWast()}\n"
     wast += '  )\n'
+    for fnAssignment in ASTNode.findFnAssignments(@children)
+      wast += "    #{fnAssignment.genWast()}\n"
     wast += '''
 (func $exp_i64 (param $base i64) (param $exp i64) (result i64)
   (local $res i64)
@@ -49,6 +68,12 @@ class ProgramNode extends ASTNode
     wast += '  (export "main" 0))'
     return wast
 
+class FunctionAssignmentNode extends ASTNode
+  genWast: ->
+    fnName = @children.target.genWast()
+    fnDef = @children.source.genWast()
+    return "(func #{fnName}#{fnDef})"
+
 class AssignmentNode extends ASTNode
   genWast: ->
     targetWast = @children.target.genWast()
@@ -61,7 +86,10 @@ class FunctionCallNode extends ASTNode
     argWasts = []
     for arg in @children.argList
       argWasts.push(arg.genWast())
-    wast = "(call_import #{nameWast}"
+    call = 'call'
+    if nameWast == '$print_i64'
+      call += '_import'
+    wast = "(#{call} #{nameWast}"
     for argWast in argWasts
       wast += " #{argWast}"
     wast += ')'
@@ -74,10 +102,28 @@ class OpExpressionNode extends ASTNode
     opWast = @children.op.genWast()
     wast = "(#{opWast} #{lhsWast} #{rhsWast})"
 
+class OpParenGroupNode extends ASTNode
+  genWast: -> @children.opExpr.genWast()
+
 class VariableNode extends ASTNode
   genWast: ->
     idWast = @children.id.genWast()
     return "(get_local #{idWast})"
+
+class FunctionDefNode extends ASTNode
+  genWast: ->
+    wast = ''
+    for arg in @children.args
+      wast += "  (param #{arg.genWast()} i64)"
+    wast += ' (result i64)\n'
+    for varName in ASTNode.findLocalVars(@children.body)
+      wast += "    (local $#{varName} i64)\n"
+    for statement in @children.body
+      wast += "  #{statement.genWast()}\n"
+    return wast
+
+class ReturnNode extends ASTNode
+  genWast: -> "(return #{@children.returnVal.genWast()})"
 
 class IdNode extends ASTNode
   genWast: -> "$#{@literal}"
@@ -102,10 +148,14 @@ class NumberNode extends ASTNode
 
 TYPES =
   _Program_: ProgramNode
+  _FunctionAssignment_: FunctionAssignmentNode
   _Assignment_: AssignmentNode
   _FunctionCall_: FunctionCallNode
   _OpExpression_: OpExpressionNode
+  _OpParenGroup_: OpParenGroupNode
   _Variable_: VariableNode
+  _FunctionDef_: FunctionDefNode
+  _Return_: ReturnNode
   _ID_: IdNode
   _NUMBER_: NumberNode
   _EXPONENT_: ExponentNode
