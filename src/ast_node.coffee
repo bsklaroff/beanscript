@@ -11,10 +11,26 @@ class ASTNode
   genWast: -> ''
 
 class ProgramNode extends ASTNode
+  _findLocalVars: (children) ->
+    varNames = []
+    for name, child of children
+      if child.length > 0
+        for subchild in child
+          if subchild.name == '_Variable_'
+            varNames.push(subchild.children.id.literal)
+          varNames = varNames.concat(@_findLocalVars(subchild.children))
+      else
+        if child.name == '_Variable_'
+          varNames.push(child.children.id.literal)
+        varNames = varNames.concat(@_findLocalVars(child.children))
+    return varNames
+
   genWast: ->
     wast = '(module\n'
     wast += '  (import $print_i64 "stdio" "print" (param i64))\n'
     wast += '  (func\n'
+    for varName in @_findLocalVars(@children)
+      wast += "    (local $#{varName} i64)\n"
     for statement in @children.statements
       wast += "    #{statement.genWast()}\n"
     wast += '  )\n'
@@ -33,13 +49,19 @@ class ProgramNode extends ASTNode
     wast += '  (export "main" 0))'
     return wast
 
+class AssignmentNode extends ASTNode
+  genWast: ->
+    targetWast = @children.target.genWast()
+    sourceWast = @children.source.genWast()
+    return "(set_local #{targetWast} #{sourceWast})"
+
 class FunctionCallNode extends ASTNode
   genWast: ->
     nameWast = @children.fnName.genWast()
     argWasts = []
     for arg in @children.argList
       argWasts.push(arg.genWast())
-    wast = "(call_import $#{nameWast}"
+    wast = "(call_import #{nameWast}"
     for argWast in argWasts
       wast += " #{argWast}"
     wast += ')'
@@ -52,9 +74,13 @@ class OpExpressionNode extends ASTNode
     opWast = @children.op.genWast()
     wast = "(#{opWast} #{lhsWast} #{rhsWast})"
 
-# TODO: handle dot object accesses
 class VariableNode extends ASTNode
-  genWast: -> @children.varNames[0].literal
+  genWast: ->
+    idWast = @children.id.genWast()
+    return "(get_local #{idWast})"
+
+class IdNode extends ASTNode
+  genWast: -> "$#{@literal}"
 
 class ExponentNode extends ASTNode
   genWast: -> 'call $exp_i64'
@@ -76,9 +102,11 @@ class NumberNode extends ASTNode
 
 TYPES =
   _Program_: ProgramNode
+  _Assignment_: AssignmentNode
   _FunctionCall_: FunctionCallNode
   _OpExpression_: OpExpressionNode
   _Variable_: VariableNode
+  _ID_: IdNode
   _NUMBER_: NumberNode
   _EXPONENT_: ExponentNode
   _TIMES_: TimesNode

@@ -33,11 +33,11 @@ BNF = {
   ]
 
   _Assignment_: [
-    '_Variable_{target} EQUALS _FunctionDef_{source}'
-    '_Variable_{target} EQUALS expr{source}'
+    '_ID_{target} EQUALS _FunctionDef_{source}'
+    '_ID_{target} EQUALS expr{source}'
   ]
   _Variable_: [
-    '((_ID_ DOT)* _ID_){varNames[]}'
+    '_ID_{id}'
   ]
 
   expr: [
@@ -71,7 +71,7 @@ BNF = {
   ]
 
   _FunctionCall_: [
-    '_Variable_{fnName} argList{argList[]}'
+    '_ID_{fnName} argList{argList[]}'
   ]
   argList: [
     'LEFT_PAREN argListInner RIGHT_PAREN'
