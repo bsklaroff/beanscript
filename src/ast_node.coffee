@@ -13,11 +13,23 @@ class ASTNode
 class ProgramNode extends ASTNode
   genWast: ->
     wast = '(module\n'
-    wast += '  (import $print_i32 "stdio" "print" (param i32))\n'
+    wast += '  (import $print_i64 "stdio" "print" (param i64))\n'
     wast += '  (func\n'
     for statement in @children.statements
       wast += "    #{statement.genWast()}\n"
     wast += '  )\n'
+    wast += '''
+(func $exp_i64 (param $base i64) (param $exp i64) (result i64)
+  (local $res i64)
+  (set_local $res (i64.const 1))
+  (loop $done $loop
+    (br_if $done (i64.eq (get_local $exp) (i64.const 0)))
+    (set_local $res (i64.mul (get_local $res) (get_local $base)))
+    (set_local $exp (i64.sub (get_local $exp) (i64.const 1)))
+    (br $loop)
+  )
+  (return (get_local $res))
+)\n'''
     wast += '  (export "main" 0))'
     return wast
 
@@ -44,11 +56,23 @@ class OpExpressionNode extends ASTNode
 class VariableNode extends ASTNode
   genWast: -> @children.varNames[0].literal
 
+class ExponentNode extends ASTNode
+  genWast: -> 'call $exp_i64'
+
+class TimesNode extends ASTNode
+  genWast: -> 'i64.mul'
+
+class DividedByNode extends ASTNode
+  genWast: -> 'i64.div'
+
 class PlusNode extends ASTNode
-  genWast: -> 'i32.add'
+  genWast: -> 'i64.add'
+
+class MinusNode extends ASTNode
+  genWast: -> 'i64.sub'
 
 class NumberNode extends ASTNode
-  genWast: -> "(i32.const #{@literal})"
+  genWast: -> "(i64.const #{@literal})"
 
 TYPES =
   _Program_: ProgramNode
@@ -56,6 +80,10 @@ TYPES =
   _OpExpression_: OpExpressionNode
   _Variable_: VariableNode
   _NUMBER_: NumberNode
+  _EXPONENT_: ExponentNode
+  _TIMES_: TimesNode
+  _DIVIDED_BY_: DividedByNode
   _PLUS_: PlusNode
+  _MINUS_: MinusNode
 
 module.exports = ASTNode
