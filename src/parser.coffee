@@ -22,7 +22,7 @@ class Parser
       if literalMatch?
         nextIdx = idx + literalMatch[0].length
         if rule.isASTNode
-          return [ASTNode.make(rule.name, literalMatch[0]), nextIdx]
+          return [new ASTNode(rule.name, literalMatch[0]), nextIdx]
         else if rule.name == 'INDENT'
           @indentLevel++
         else if rule.name == 'UNINDENT'
@@ -36,7 +36,7 @@ class Parser
         return [null, nextIdx]
     else if rule.isASTNode
       for pattern in rule.patterns
-        newNode = ASTNode.make(rule.name)
+        newNode = new ASTNode(rule.name)
         # If we're parsing an ast node pattern, we know @tryPattern will return an object
         [newNode.children, nextIdx] = @tryPattern(pattern, idx, end)
         if (nextIdx > -1 and not end) or nextIdx == @inputString.length

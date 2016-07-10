@@ -8,6 +8,7 @@ BNF = {
   statement: [
     '_Return_'
     '_If_'
+    '_While_'
     '_FunctionAssignment_'
     '_Assignment_'
     'expr'
@@ -33,14 +34,23 @@ BNF = {
     '_EMPTY_'
   ]
 
+  _While_: [
+    'WHILE expr{condition} INDENT NEWLINE statements{body[]} UNINDENT'
+  ]
+
   _FunctionAssignment_: [
-    '_ID_{target} EQUALS _FunctionDef_{source}'
+    '_TypedVariable_{target} EQUALS _FunctionDef_{source}'
   ]
   _Assignment_: [
-    '_ID_{target} EQUALS expr{source}'
+    '_TypedVariable_{target} EQUALS expr{source}'
+  ]
+  _TypedVariable_: [
+    '_Variable_{var} LEFT_CURLY _ID_{type} RIGHT_CURLY'
+    '_Variable_{var} _EMPTY_{type}'
   ]
   _Variable_: [
-    '_ID_{id}'
+    '_ID_{obj} DOT _Variable_{prop}'
+    '_ID_{obj} _EMPTY_{prop}'
   ]
 
   expr: [
@@ -51,7 +61,7 @@ BNF = {
   _OpExpression_: [
     'nonOpExpr{lhs} op{op} expr{rhs}'
     '_EMPTY_{lhs} _NOT_{op} expr{rhs}'
-    '_EMPTY_{lhs} _MINUS_{op} expr{rhs}'
+    '_EMPTY_{lhs} _NEG_{op} expr{rhs}'
   ]
   _OpParenGroup_: [
     'LEFT_PAREN _OpExpression_{opExpr} RIGHT_PAREN'
@@ -73,12 +83,16 @@ BNF = {
     '_MINUS_'
     '_EQUALS_EQUALS_'
     '_NOT_EQUALS_'
+    '_LTE_'
+    '_LT_'
+    '_GTE_'
+    '_GT_'
     '_AND_'
     '_OR_'
   ]
 
   _FunctionCall_: [
-    '_ID_{fnName} argList{argList[]}'
+    '_Variable_{fnName} argList{argList[]}'
   ]
   argList: [
     'LEFT_PAREN argListInner RIGHT_PAREN'
@@ -90,6 +104,13 @@ BNF = {
   argListInner0: [
     'expr COMMA argListInner0'
     'expr'
+  ]
+
+  _Array_: [
+    'LEFT_SQUARE argListInner{items[]} RIGHT_SQUARE'
+  ]
+  _ArrayRange_: [
+    'LEFT_SQUARE expr{start} DOT_DOT expr{end} RIGHT_SQUARE'
   ]
 
   _String_: [
@@ -119,8 +140,12 @@ BNF = {
     ''
   ]
   argDefListInner0: [
-    '_ID_ COMMA argDefListInner0'
-    '_ID_'
+    '_TypedId_ COMMA argDefListInner0'
+    '_TypedId_'
+  ]
+  _TypedId_: [
+    '_ID_{id} LEFT_CURLY _ID_{type} RIGHT_CURLY'
+    '_ID_{id} _EMPTY_{type}'
   ]
 
   fnDef0: [
@@ -132,6 +157,7 @@ BNF = {
   WHITESPACE: '[ \t]*'
   RETURN: 'return'
   IF: 'if'
+  WHILE: 'while'
   ELSE: 'else'
   EQUALS: '='
   DOT: '\\.'
@@ -139,6 +165,11 @@ BNF = {
   _NUMBER_: '[0-9]+(\\.[0-9]*)?'
   LEFT_PAREN: '\\('
   RIGHT_PAREN: '\\)'
+  LEFT_SQUARE: '\\['
+  RIGHT_SQUARE: '\\]'
+  LEFT_CURLY: '{'
+  RIGHT_CURLY: '}'
+  DOT_DOT: '\\.\\.'
   COMMA: ','
   _MOD_: '%'
   _EXPONENT_: '\\*\\*'
@@ -150,7 +181,12 @@ BNF = {
   _OR_: 'or'
   _EQUALS_EQUALS_: '=='
   _NOT_EQUALS_: '!='
+  _LT_: '<'
+  _LTE_: '<='
+  _GT_: '>'
+  _GTE_: '>='
   _NOT_: 'not'
+  _NEG_: '-'
   SINGLE_QUOTE: "'"
   DOUBLE_QUOTE: '"'
   _ESCAPED_SINGLE_QUOTES_: "\\\\'+"

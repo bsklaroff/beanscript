@@ -8,5 +8,5 @@ parser = new Parser(inputStr)
 
 parser.parse()
 #console.log(JSON.stringify(parser.astTree, null, 2))
-codeGen = new CodeGen(parser.astTree)
-console.log(codeGen.genWast())
+codeGen = new CodeGen()
+console.log(codeGen.genWast(parser.astTree))
