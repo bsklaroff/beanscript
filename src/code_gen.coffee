@@ -45,9 +45,11 @@ class CodeGen
     return @[CodeGen.WAST_GEN_FNS[node.name]](node)
 
   genProgram: (node) ->
-    @symbolTable.extractNodeSymbols(node)
+    @symbolTable.genNodeSymbols(node)
+    console.log(JSON.stringify(node, null, 2))
     console.log(JSON.stringify(@symbolTable, null, 2))
 
+    ###
     mainWast = ''
     fnsWast = ''
     for statement in node.children.statements
@@ -80,6 +82,7 @@ class CodeGen
     wast += '  (export "main" 0)\n'
     wast += ')\n'
     return wast
+    ###
 
   genWhile: (node) ->
     wast = "(loop $done $loop\n"
