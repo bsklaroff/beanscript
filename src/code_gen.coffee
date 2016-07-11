@@ -1,36 +1,6 @@
+SymbolTable = require('./symbol_table')
+
 class CodeGen
-  @findLocalVars: (children, excludedNames = {}) ->
-    varNames = {}
-    for name, child of children
-      if child.length > 0
-        for subchild in child
-          if subchild.name == '_Assignment_' and subchild.children.target.literal not of excludedNames
-            varNames[subchild.children.target.literal] = 1
-          else if subchild.name != '_FunctionAssignment_'
-            for varName in CodeGen.findLocalVars(subchild.children, excludedNames)
-              varNames[varName] = 1
-      else
-        if child.name == '_Assignment_' and child.children.target.literal not of excludedNames
-          varNames[child.children.target.literal] = 1
-        else if child.name != '_FunctionAssignment_'
-          for varName in CodeGen.findLocalVars(child.children, excludedNames)
-            varNames[varName] = 1
-    return Object.keys(varNames)
-
-  @findFnAssignments: (children) ->
-    fnAssignments = []
-    for name, child of children
-      if child.length > 0
-        for subchild in child
-          if subchild.name == '_FunctionAssignment_'
-            fnAssignments.push(subchild)
-          fnAssignments = fnAssignments.concat(CodeGen.findFnAssignments(subchild.children))
-      else
-        if child.name == '_FunctionAssignment_'
-          fnAssignments.push(child)
-        fnAssignments = fnAssignments.concat(CodeGen.findFnAssignments(child.children))
-    return fnAssignments
-
   @WAST_GEN_FNS:
     _Program_: 'genProgram'
     _While_: 'genWhile'
@@ -57,25 +27,29 @@ class CodeGen
     _NEG_: 'genNeg'
 
   constructor: ->
-    @global = {}
+    @symbolTable = new SymbolTable()
     return
 
-  genWast: (node, scope = @global) ->
-    return @[CodeGen.WAST_GEN_FNS[node.name]](node, scope)
+  genWast: (node) ->
+    return @[CodeGen.WAST_GEN_FNS[node.name]](node)
 
-  genProgram: (node, scope) ->
+  genProgram: (node) ->
+    @symbolTable.extractNodeSymbols(node)
+    console.log(JSON.stringify(@symbolTable, null, 2))
+    return
+    ###
     mainBody = ''
     for statement in node.children.statements
       if statement.name != '_FunctionAssignment_'
-        mainBody += "    #{@genWast(statement, scope)}\n"
+        mainBody += "    #{@genWast(statement)}\n"
     mainBody += '  )\n'
     for fnAssignment in CodeGen.findFnAssignments(node.children)
-      mainBody += "    #{@genWast(fnAssignment, scope)}\n"
+      mainBody += "    #{@genWast(fnAssignment)}\n"
 
     wast = '(module\n'
     wast += '  (import $print_i64 "stdio" "print" (param i64))\n'
     wast += '  (func\n'
-    for varName of @symbols.globals
+    for varName of @symbols
       wast += "(local $#{varName} i32)"
     wast += mainBody
     wast += '''
@@ -92,6 +66,7 @@ class CodeGen
 )\n'''
     wast += '  (export "main" 0))'
     return wast
+    ###
 
   genWhile: (node) ->
     wast = '(loop $done $loop\n'
@@ -108,6 +83,7 @@ class CodeGen
     return wast
 
   genFunctionAssignment: (node) ->
+    fnSymbol = @_getSymbol(node)
     fnName = @genWast(node.children.target)
     fnDef = @genWast(node.children.source)
     return "(func #{fnName}#{fnDef})"

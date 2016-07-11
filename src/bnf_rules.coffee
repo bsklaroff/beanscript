@@ -45,12 +45,12 @@ BNF = {
     '_TypedVariable_{target} EQUALS expr{source}'
   ]
   _TypedVariable_: [
-    '_Variable_{var} LEFT_CURLY _ID_{type} RIGHT_CURLY'
-    '_Variable_{var} _EMPTY_{type}'
+    '_ID_{type} _Variable_{var}'
+    '_EMPTY_{type} _Variable_{var}'
   ]
   _Variable_: [
-    '_ID_{obj} DOT _Variable_{prop}'
-    '_ID_{obj} _EMPTY_{prop}'
+    '_ID_{id} DOT _Variable_{prop}'
+    '_ID_{id} _EMPTY_{prop}'
   ]
 
   expr: [
@@ -69,6 +69,8 @@ BNF = {
   nonOpExpr: [
     '_OpParenGroup_'
     '_FunctionCall_'
+    '_Array_'
+    '_ArrayRange_'
     '_Variable_'
     '_String_'
     '_NUMBER_'
@@ -144,8 +146,8 @@ BNF = {
     '_TypedId_'
   ]
   _TypedId_: [
-    '_ID_{id} LEFT_CURLY _ID_{type} RIGHT_CURLY'
-    '_ID_{id} _EMPTY_{type}'
+    '_ID_{type} _ID_{id}'
+    '_EMPTY_{type} _ID_{id} _EMPTY_{type}'
   ]
 
   fnDef0: [
@@ -167,8 +169,6 @@ BNF = {
   RIGHT_PAREN: '\\)'
   LEFT_SQUARE: '\\['
   RIGHT_SQUARE: '\\]'
-  LEFT_CURLY: '{'
-  RIGHT_CURLY: '}'
   DOT_DOT: '\\.\\.'
   COMMA: ','
   _MOD_: '%'
