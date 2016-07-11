@@ -7,6 +7,15 @@ class ASTNode
   @isNestedVariable: (node) -> node.name == '_Variable_' and not ASTNode.isEmpty(node.children.prop)
   @isTypedVariable: (node) -> node.name == '_TypedVariable_'
 
+  @traverseChildren: (node, traverseFn) ->
+    for name, child of node.children
+      if child.length > 0
+        for subchild in child
+          traverseFn(subchild)
+      else
+        traverseFn(child)
+    return
+
   constructor: (@name, @literal = null) ->
     @children = null
     return

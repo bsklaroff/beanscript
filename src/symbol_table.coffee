@@ -2,8 +2,6 @@ ASTNode = require('./ast_node')
 
 class Symbol
   constructor: (@name, @type) ->
-    @props = if @type == 'obj' then {} else null
-    @scopeName = null
     return
 
   addProperty: (varNode, type) ->
@@ -11,6 +9,7 @@ class Symbol
       throw new Error("Cannot add property to non-obj symbol: #{@}")
     if not ASTNode.isTypedVariable(typedVarNode)
       throw new Error("Expected node to be a typed variable: #{typedVarNode}")
+    @props ?= {}
     varName = varNode.children.id.literal
     if ASTNode.isNestedVariable(varNode)
       if varName not of @props
@@ -77,15 +76,6 @@ class SymbolTable
     @fnScopes[name] = new Scope(name, parentScope)
     return @fnScopes[name]
 
-  _traverseChildren: (children, traverseFn) ->
-    for name, child of children
-      if child.length > 0
-        for subchild in child
-          traverseFn(subchild)
-      else
-        traverseFn(child)
-    return
-
   extractNodeSymbols: (node, scope = @globalScope) ->
     if ASTNode.isAssignment(node)
       target = node.children.target
@@ -115,7 +105,7 @@ class SymbolTable
       for statement in fnDef.children.body
         @extractNodeSymbols(statement, fnScope)
     else
-      @_traverseChildren(node.children, (child) => @extractNodeSymbols(child, scope))
+      ASTNode.traverseChildren(node, (child) => @extractNodeSymbols(child, scope))
     return
 
 module.exports = SymbolTable
