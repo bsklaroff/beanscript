@@ -46,9 +46,16 @@ class CodeGen
 
   genProgram: (node) ->
     @symbolTable.genNodeSymbols(node)
-    console.log(JSON.stringify(node, null, 2))
-    console.log(JSON.stringify(@symbolTable, null, 2))
-
+    #console.log(JSON.stringify(node, null, 2))
+    seen = []
+    console.log(JSON.stringify(@symbolTable, (a, value) ->
+      if typeof value == 'object'
+        if seen.indexOf(value) != -1
+          return value?.name
+        else
+          seen.push(value)
+      return value
+    , 2))
     ###
     mainWast = ''
     fnsWast = ''
