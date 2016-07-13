@@ -1,5 +1,7 @@
 ASTNode = require('./ast_node')
 SymbolTable = require('./symbol_table')
+Symbol = require('./symbol')
+builtin = require('./builtin')
 
 class CodeGen
   @WAST_GEN_FNS:
@@ -10,12 +12,9 @@ class CodeGen
     _FunctionCall_: 'genFunctionCall'
     _OpExpression_: 'genOpExpression'
     _OpParenGroup_: 'genOpParenGroup'
-    _TypedVariable_: 'genTypedVariable'
-    _Variable_: 'genVariable'
     _FunctionDef_: 'genFunctionDef'
     _TypedId_: 'genTypedId'
     _Return_: 'genReturn'
-    _ID_: 'genId'
     _NUMBER_: 'genNumber'
     _LT_: 'genLT'
     _LTE_: 'genLTE'
@@ -30,51 +29,67 @@ class CodeGen
 
   constructor: ->
     @symbolTable = new SymbolTable()
-    @scope = @symbolTable.globalScope
+    @scope = @symbolTable.scopes.global
     return
 
   _addIndent: (wast, n = 1) ->
     wastSplit = wast.split('\n')
-    for i in [0...wastSplit.length]
+    # Don't indent the trailing newline
+    for i in [0...wastSplit.length - 1]
       for j in [0...n]
         wastSplit[i] = "  #{wastSplit[i]}"
     return wastSplit.join('\n')
 
+  _genLocals: (scope, numTemps) ->
+    wast = ''
+    for name, symbol of scope.locals
+      for wastVar in symbol.wastVars()
+        wast += "(local #{wastVar} i32)\n"
+    for i in [0...numTemps]
+      wast += "(local $$t#{i} i32)\n"
+    return wast
+
   genWast: (node) ->
-    #console.log(node)
+    if node.name not of CodeGen.WAST_GEN_FNS
+      return ''
     return @[CodeGen.WAST_GEN_FNS[node.name]](node)
 
   genProgram: (node) ->
     @symbolTable.genNodeSymbols(node)
+
+    ###
     #console.log(JSON.stringify(node, null, 2))
     seen = []
     console.log(JSON.stringify(@symbolTable, (a, value) ->
       if typeof value == 'object'
+        if not value?
+          return null
         if seen.indexOf(value) != -1
-          return value?.name
+          return value.name
         else
           seen.push(value)
       return value
     , 2))
     ###
+
     mainWast = ''
     fnsWast = ''
     for statement in node.children.statements
       if ASTNode.isFunctionAssignment(statement)
-        next = @_addIndent(@genWast(statement))
-        fnsWast += "#{next}\n"
+        fnsWast += @_addIndent(@genWast(statement))
       else
-        next = @_addIndent(@genWast(statement), 2)
-        mainWast += "#{next}\n"
+        mainWast += @_addIndent(@genWast(statement), 2)
 
     wast = '(module\n'
-    wast += '  (import $print_i64 "stdio" "print" (param i64))\n'
+    wast += '  (import $print_i32 "stdio" "print" (param i32))\n'
     wast += '  (func\n'
-    for varName of @scope.locals
-      wast += "    (local $#{varName} i32)\n"
+    localsWast = @_genLocals(@scope, 3)
+    if localsWast.length > 0
+      wast += @_addIndent(localsWast, 2)
     wast += mainWast
     wast += '  )\n'
     wast += fnsWast
+    ###
     wast += '  (func $exp_i64 (param $base i64) (param $exp i64) (result i64)\n'
     wast += '    (local $res i64)\n'
     wast += '    (set_local $res (i64.const 1))\n'
@@ -86,10 +101,10 @@ class CodeGen
     wast += '    )\n'
     wast += '    (return (get_local $res))\n'
     wast += '  )\n'
+    ###
     wast += '  (export "main" 0)\n'
     wast += ')\n'
     return wast
-    ###
 
   genWhile: (node) ->
     wast = "(loop $done $loop\n"
@@ -111,43 +126,39 @@ class CodeGen
     return "(func #{fnName}#{fnDef})"
 
   genAssignment: (node) ->
-    targetWast = @genWast(node.children.target)
-    sourceWast = @genWast(node.children.source)
-    return "(set_local #{targetWast} #{sourceWast})"
-
-  genFunctionCall: (node) ->
-    nameWast = @genWast(node.children.fnName)
-    argWasts = []
-    for arg in node.children.argList
-      argWasts.push(@genWast(arg))
-    call = 'call'
-    if nameWast == '$print_i64'
-      call += '_import'
-    wast = "(#{call} #{nameWast}"
-    for argWast in argWasts
-      wast += " #{argWast}"
-    wast += ')'
+    wast = @genWast(node.children.source)
+    targetSymbol = @scope.getSymbol(node.children.target.symbolName)
+    sourceSymbol = @scope.getSymbol(node.children.source.symbolName)
+    wast += builtin.fns.assign(targetSymbol, sourceSymbol)
     return wast
 
+  genFunctionCall: (node) ->
+    wast = ''
+    args = []
+    for arg in node.children.argList
+      wast += @genWast(arg)
+      args.push(@scope.getSymbol(arg.symbolName))
+    fnNameSymbol = @scope.getSymbol(node.children.fnName.symbolName)
+    resSymbol = @scope.getSymbol(node.symbolName)
+    if fnNameSymbol.name of builtin.FN_CALL_MAP
+      wast += builtin.fns[builtin.FN_CALL_MAP[fnNameSymbol.name]](resSymbol, args)
+      return wast
+    return 'unimplemented'
+
   genOpExpression: (node) ->
-    lhsWast = @genWast(node.children.lhs)
-    rhsWast = @genWast(node.children.rhs)
-    opWast = @genWast(node.children.op)
-    wast = "(#{opWast} #{lhsWast} #{rhsWast})"
+    wast = @genWast(node.children.lhs)
+    wast += @genWast(node.children.rhs)
+    fnName = builtin.OP_MAP[node.children.op.name]
+    resSymbol = @scope.getSymbol(node.symbolName)
+    lhsSymbol = @scope.getSymbol(node.children.lhs.symbolName)
+    rhsSymbol = @scope.getSymbol(node.children.rhs.symbolName)
+    if lhsSymbol?
+      wast += builtin.fns[fnName](resSymbol, lhsSymbol, rhsSymbol)
+      return wast
+    wast += builtin.fns[fnName](resSymbol, rhsSymbol)
+    return wast
 
   genOpParenGroup: (node) -> @genWast(node.children.opExpr)
-
-  genTypedVariable: (node) ->
-    idWast = @genWast(node.children.var)
-    return "(get_local #{idWast})"
-
-  genVariable: (node) ->
-    idWast = @genWast(node.children.id)
-    return "(get_local #{idWast})"
-
-  genTypedId: (node) ->
-    idWast = @genWast(node.children.id)
-    return "(get_local #{idWast})"
 
   genFunctionDef: (node) ->
     wast = ''
@@ -167,9 +178,16 @@ class CodeGen
 
   genReturn: (node) -> "(return #{@genWast(node.children.returnVal)})"
 
-  genId: (node) -> "$#{node.literal}"
-
-  genNumber: (node) -> "(i64.const #{node.literal})"
+  genNumber: (node) ->
+    symbol = @scope.getSymbol(node.symbolName)
+    if symbol.type == Symbol.TYPES.I32
+      return "(set_local #{symbol.name} (i32.const #{node.literal}))\n"
+    else if symbol.type == Symbol.TYPES.I64
+      wast = "(set_local #{symbol.lowWord} (i32.const #{node.literal}))\n"
+      wast += "(set_local #{symbol.highWord} (i32.const 0))\n"
+      return wast
+    throw new Error("Number constant does not exist for type #{symbol.type}")
+    return
 
   genLT: (node) -> 'i64.lt_s'
 
