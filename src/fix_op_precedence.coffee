@@ -12,8 +12,6 @@ OP_PRECEDENCE_LEVELS = [
   ['_NOT_', '_NEG_']
 ]
 
-isOpNode = (astNode) -> astNode.name == OP_EXPRESSION_NAME
-
 fixOpPrecedence = (astNode) ->
   # Check if astNode is an array
   if astNode.length?
@@ -21,7 +19,7 @@ fixOpPrecedence = (astNode) ->
       astNode[i] = fixOpPrecedence(child)
     return astNode
   # Check if astNode is an non-op
-  if not isOpNode(astNode)
+  if not astNode.isOpExpression()
     for name, child of astNode.children
       astNode.children[name] = fixOpPrecedence(child)
     return astNode
@@ -33,7 +31,7 @@ fixOpPrecedence = (astNode) ->
 
 getOpLists = (astNode) ->
   # Check if astNode was the last rhs in an op chain
-  if not isOpNode(astNode)
+  if not astNode.isOpExpression()
     return [[], [astNode]]
   [operators, operands] = getOpLists(astNode.children.rhs)
   operators.unshift(astNode.children.op)
@@ -57,7 +55,7 @@ makeOpTree = (operators, operands, precedenceIdx) ->
   return makeOpTree(operators, operands, precedenceIdx + 1)
 
 makeOpNode = (operator, lhs, rhs) ->
-  opNode = new ASTNode(OP_EXPRESSION_NAME)
+  opNode = ASTNode.make(OP_EXPRESSION_NAME)
   opNode.children =
     lhs: lhs
     op: operator

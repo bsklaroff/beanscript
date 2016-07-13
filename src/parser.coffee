@@ -1,5 +1,5 @@
 ASTNode = require('./ast_node')
-bnfRules = require('./bnf_rules')
+grammar = require('./grammar')
 fixOpPrecedence = require('./fix_op_precedence')
 
 class Parser
@@ -12,7 +12,7 @@ class Parser
 
   parse: ->
     @indentLevel = 0
-    @astTree = @tryRule(bnfRules._Program_, 0, true)[0]
+    @astTree = @tryRule(grammar._Program_, 0, true)[0]
     @astTree = fixOpPrecedence(@astTree)
     return
 
@@ -22,21 +22,21 @@ class Parser
       if literalMatch?
         nextIdx = idx + literalMatch[0].length
         if rule.isASTNode
-          return [new ASTNode(rule.name, literalMatch[0]), nextIdx]
+          return [ASTNode.make(rule.name, literalMatch[0]), nextIdx]
         else if rule.name == 'INDENT'
           @indentLevel++
         else if rule.name == 'UNINDENT'
           @indentLevel--
         else if rule.name == 'NEWLINE'
           # Parse next line's indentation with this line
-          [whitespace, postIndentIdx] = @tryRule(bnfRules.WHITESPACE, nextIdx)
+          [whitespace, postIndentIdx] = @tryRule(grammar.WHITESPACE, nextIdx)
           if postIndentIdx != nextIdx + @indentLevel * SPACES_PER_INDENT
             return [null, -1]
           nextIdx = postIndentIdx
         return [null, nextIdx]
     else if rule.isASTNode
       for pattern in rule.patterns
-        newNode = new ASTNode(rule.name)
+        newNode = ASTNode.make(rule.name)
         # If we're parsing an ast node pattern, we know @tryPattern will return an object
         [newNode.children, nextIdx] = @tryPattern(pattern, idx, end)
         if (nextIdx > -1 and not end) or nextIdx == @inputString.length
@@ -61,7 +61,7 @@ class Parser
       if symbol.astChildKey?
         childrenObj ?= {}
       # Ignore whitespace
-      [whitespace, idx] = @tryRule(bnfRules.WHITESPACE, idx)
+      [whitespace, idx] = @tryRule(grammar.WHITESPACE, idx)
       # Attempt to match parenthesized subgroup
       if symbol.isGroup
         # We know this will return an array because symbol.subsymbols is not an ast node pattern
@@ -69,7 +69,7 @@ class Parser
         @updateChildren(patternResult, symbol, childrenObj, childrenArr)
       # Attempt to match rule token
       else
-        [ruleResult, nextIdx] = @tryRule(bnfRules[symbol.name], idx, lastToken)
+        [ruleResult, nextIdx] = @tryRule(grammar[symbol.name], idx, lastToken)
         @updateChildren(ruleResult, symbol, childrenObj, childrenArr)
       # If this symbol has a STAR, only move forward if we didn't match
       if symbol.zeroOrMore

@@ -1,5 +1,6 @@
+ASTNode = require('./src/ast_node')
 Parser = require('./src/parser')
-CodeGen = require('./src/code_gen')
+Scope = require('./src/scope')
 
 fs = require('fs')
 inputStr = fs.readFileSync(process.argv[2]).toString()
@@ -7,5 +8,6 @@ inputStr = fs.readFileSync(process.argv[2]).toString()
 parser = new Parser(inputStr)
 
 parser.parse()
-codeGen = new CodeGen()
-console.log(codeGen.genWast(parser.astTree))
+parser.astTree.genSymbols(new Scope('global', null))
+#console.log(JSON.stringify(ASTNode.getScopes(parser.astTree), null, 2))
+console.log(parser.astTree.genWast())

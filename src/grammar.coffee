@@ -1,4 +1,4 @@
-BNF = {
+GRAMMAR = {
   _Program_: [
     'statements{statements[]}'
   ]
@@ -199,7 +199,7 @@ BNF = {
   _EMPTY_: ''
 }
 
-class BNFRule
+class GrammarRule
   RULE_TOKENS:
     WHITESPACE: ' +'
     ID: '[_a-zA-Z0-9]+'
@@ -322,9 +322,8 @@ class BNFRule
         return [tokenName, tokenMatch[0]]
     throw new Error("No valid rule token found while parsing: #{@patternStringToParse}")
 
-bnfRules = {}
-for name, patternStrings of BNF
-  bnfRules[name] = new BNFRule(name, patternStrings)
+grammar = {}
+for name, patternStrings of GRAMMAR
+  grammar[name] = new GrammarRule(name, patternStrings)
 
-module.exports = bnfRules
-
+module.exports = grammar

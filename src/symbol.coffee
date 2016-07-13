@@ -1,5 +1,3 @@
-ASTNode = require('./ast_node')
-
 class Symbol
   @TYPES:
     FN: 'fn'
@@ -10,12 +8,11 @@ class Symbol
     BOOL: 'bool'
 
   constructor: (@name, @scopeName, @namedVar) ->
+    @shortName = if @namedVar then @name else @name.split('_')[0]
+    @uniqName = "#{@scopeName}:#{@name}"
     @type = null
     @_eqTypeSymbols = {}
     return
-
-  getShortName: -> if @namedVar then @name else @name.split('_')[0]
-  getScopedName: -> "#{@scopeName}:#{@name}"
 
   ###
   addProperty: (varNode, type) ->
@@ -63,11 +60,18 @@ class Symbol
       @highWord = "#{@name}~high"
     return
 
+  addEqTypeSymbol: (otherSymbol) ->
+    @_eqTypeSymbols[otherSymbol.uniqName] = otherSymbol
+    return
+
   unifyType: (otherSymbol) ->
     if otherSymbol.type?
       @setType(otherSymbol.type)
-    else if not @type?
-      @_eqTypeSymbols[otherSymbol.getScopedName()] = otherSymbol
+    else if @type?
+      otherSymbol.setType(@type)
+    else
+      @addEqTypeSymbol(otherSymbol)
+      otherSymbol.addEqTypeSymbol(@)
     return
 
   unifyReturnType: (returnSymbol) ->
@@ -93,12 +97,23 @@ class Symbol
       return [@lowWord, @highWord]
     return []
 
-class FnSymbol extends Symbol
-  constructor: (@name, @scopeName) ->
-    @type = Symbol.TYPES.FN
-    @_eqTypeSymbols = {}
-    return
-
-class AnonSymbol extends Symbol
+  toJSON: ->
+    eqTypeSymbols = []
+    for name of @_eqTypeSymbols
+      eqTypeSymbols.push(name)
+    res = {
+      name: @name
+      scopeName: @scopeName
+      namedVar: @namedVar
+      type: @type
+      _eqTypeSymbols: eqTypeSymbols
+    }
+    if @type == Symbol.TYPES.FN
+      res.returnSymbol = @returnSymbol
+      res.argSymbols = @argSymbols
+    else if @type == Symbol.TYPES.I64
+      res.lowWord = @lowWord
+      res.highWord = @highWord
+    return res
 
 module.exports = Symbol
