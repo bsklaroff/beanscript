@@ -4,7 +4,7 @@ Scope = require('./scope')
 
 class ASTNode
   #TODO: unhardcode this
-  @NUM_TEMPS = 3
+  @NUM_TEMPS = 11
 
   @COMPARISON_OPS = [
     '_EQUALS_EQUALS_'
@@ -148,8 +148,10 @@ class ProgramNode extends ASTNode
 
 
 class ReturnNode extends ASTNode
-  genWast: -> 'unimplemented'
-
+  genWast: ->
+    wast = @children.returnVal.genWast()
+    wast += "(return unimplemented)"
+    return wast
 
 class WhileNode extends ASTNode
   genWast: ->
