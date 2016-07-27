@@ -3,8 +3,8 @@ Symbol = require('./symbol')
 Scope = require('./scope')
 
 class ASTNode
-  #TODO: unhardcode this
-  @NUM_TEMPS = 11
+  #TODO: unhardcode this, and give them types
+  @NUM_TEMPS = 0
 
   @COMPARISON_OPS = [
     '_EQUALS_EQUALS_'
@@ -82,8 +82,8 @@ class ASTNode
   _genLocals: ->
     wast = ''
     for name, symbol of @scope.locals
-      for wastVar in symbol.wastVars()
-        wast += "(local #{wastVar} i32)\n"
+      for [wastVar, type] in symbol.wastVars()
+        wast += "(local #{wastVar} #{type})\n"
     for i in [0...ASTNode.NUM_TEMPS]
       wast += "(local $$t#{i} i32)\n"
     return wast
@@ -122,6 +122,7 @@ class ProgramNode extends ASTNode
 
     wast = '(module\n'
     wast += '  (import $print_i32 "stdio" "print" (param i32))\n'
+    wast += '  (import $print_i64 "stdio" "print" (param i64))\n'
     wast += '  (func\n'
     localsWast = @_genLocals()
     if localsWast.length > 0
@@ -319,9 +320,7 @@ class NumberNode extends ASTNode
     if @symbol.type == Symbol.TYPES.I32
       return "(set_local #{@symbol.name} (i32.const #{@literal}))\n"
     else if @symbol.type == Symbol.TYPES.I64
-      wast = "(set_local #{@symbol.lowWord} (i32.const #{@literal}))\n"
-      wast += "(set_local #{@symbol.highWord} (i32.const 0))\n"
-      return wast
+      return "(set_local #{@symbol.name} (i64.const #{@literal}))\n"
     throw new Error("Number constant does not exist for type #{@symbol.type}")
     return
 

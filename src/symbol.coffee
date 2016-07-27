@@ -55,9 +55,6 @@ class Symbol
     if @type == Symbol.TYPES.FN
       @returnSymbol = new Symbol("#{@name}:return", @scopeName, false)
       @argSymbols = []
-    else if @type == Symbol.TYPES.I64
-      @lowWord = "#{@name}~low"
-      @highWord = "#{@name}~high"
     return
 
   addEqTypeSymbol: (otherSymbol) ->
@@ -92,9 +89,9 @@ class Symbol
 
   wastVars: ->
     if @type == Symbol.TYPES.I32
-      return [@name]
+      return [[@name, 'i32']]
     else if @type == Symbol.TYPES.I64
-      return [@lowWord, @highWord]
+      return [[@name, 'i64']]
     return []
 
   toJSON: ->
@@ -111,9 +108,6 @@ class Symbol
     if @type == Symbol.TYPES.FN
       res.returnSymbol = @returnSymbol
       res.argSymbols = @argSymbols
-    else if @type == Symbol.TYPES.I64
-      res.lowWord = @lowWord
-      res.highWord = @highWord
     return res
 
 module.exports = Symbol
