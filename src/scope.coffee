@@ -40,14 +40,8 @@ class Scope
     @argNames = []
     argSymbols = []
     for arg in args
-      argName = "$#{arg.children.id.literal}"
-      argType = arg.children.type.literal
-      if argName of @locals
-        throw new Error("Duplicate function argument: #{arg}")
-      @locals[argName] = new Symbol(argName, @name, true)
-      @locals[argName].setType(argType)
-      @argNames.push(argName)
-      argSymbols.push(@locals[argName])
+      @argNames.push(arg.symbol.name)
+      argSymbols.push(arg.symbol)
     fnSymbol.unifyArgTypes(argSymbols)
     return
 

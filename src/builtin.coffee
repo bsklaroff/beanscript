@@ -22,7 +22,7 @@ builtin =
 
   fns:
     print: (res, [x]) ->
-      wast = ";;print(#{x.name})\n"
+      wast = ''
       if x.type == Symbol.TYPES.I32
         wast += "(call_import $print_i32 (i32.const 32))\n"
         wast += "(call_import $print_i32 (get_local #{x.name}))\n"
@@ -36,6 +36,8 @@ builtin =
       return wast
 
     assign: (target, source) ->
+      if target.type == Symbol.TYPES.FN and source.type == Symbol.TYPES.FN
+        return ''
       wast = ";;#{target.name} = #{source.name}\n"
       if (target.type == Symbol.TYPES.I32 and source.type == Symbol.TYPES.I32) or
          (target.type == Symbol.TYPES.I64 and source.type == Symbol.TYPES.I64)

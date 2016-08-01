@@ -1,6 +1,6 @@
 # beanscript
 
-## How to Run
+## How to run
 First, install [CoffeeScript](http://coffeescript.org/)
 
 Then, to compile a beanscript file to WebAssembly s-expressions:

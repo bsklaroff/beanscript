@@ -31,6 +31,16 @@ class ASTNode
     node.traverseChildren(getScopesFn)
     return scopes
 
+  # Generate a wast that lists all local variables of a scope
+  @genLocals: (scope) ->
+    wast = ''
+    for name, symbol of scope.locals
+      for [wastVar, type] in symbol.wastVars()
+        wast += "(local #{wastVar} #{type})\n"
+    for i in [0...ASTNode.NUM_TEMPS]
+      wast += "(local $$t#{i} i32)\n"
+    return wast
+
   @addIndent: (wast, n = 1) ->
     wastSplit = wast.split('\n')
     # Don't indent the trailing newline
@@ -46,11 +56,11 @@ class ASTNode
     # Generate 'isNodeType' functions
     for type of TYPES
       # Strip underscores
-      type = type[1...-1]
+      niceType = type[1...-1]
       # For ALLCAPS node names, only uppercase the first letter
-      if type == type.toUpperCase()
-        type = "#{type[0]}#{type[1..].toLowerCase()}"
-      fnName = "is#{type}"
+      if niceType == niceType.toUpperCase()
+        niceType = "#{niceType[0]}#{niceType[1..].toLowerCase()}"
+      fnName = "is#{niceType}"
       if type == @name
         @[fnName] = -> true
       else
@@ -60,39 +70,26 @@ class ASTNode
   isNestedVariable: -> @isVariable() and not @children.prop.isEmpty()
   isComparisonOp: -> @isOpExpression() and @children.op.name in ASTNode.COMPARISON_OPS
 
-  # For generating the symbol table, we want to traverse function assignments
-  # last so that the entire outer scope is defined before any inner scopes
-  traverseChildren: (traverseFn, fnAssignmentsLast = false) ->
-    fnAssignments = []
+  traverseChildren: (traverseFn) ->
+    fnDefs = []
     for name, child of @children
       if child.length > 0
         for subchild in child
-          if fnAssignmentsLast and subchild.isFunctionAssignment()
-            fnAssignments.push(subchild)
-          else
-            traverseFn(subchild)
-      else if fnAssignmentsLast and child.isFunctionAssignment()
-        fnAssignments.push(child)
+          traverseFn(subchild)
       else
         traverseFn(child)
-    for fnAssignment in fnAssignments
-      traverseFn(fnAssignment)
     return
 
-  _genLocals: ->
-    wast = ''
-    for name, symbol of @scope.locals
-      for [wastVar, type] in symbol.wastVars()
-        wast += "(local #{wastVar} #{type})\n"
-    for i in [0...ASTNode.NUM_TEMPS]
-      wast += "(local $$t#{i} i32)\n"
-    return wast
-
   genSymbols: (@scope) ->
-    @traverseChildren(((child) => child.genSymbols(@scope)), true)
+    @traverseChildren((child) => child.genSymbols(@scope))
     return
 
   genWast: -> ''
+
+  genFunctionDefWast: ->
+    wast = ''
+    @traverseChildren((child) => wast += child.genFunctionDefWast(@scope))
+    return wast
 
 
 class ProgramNode extends ASTNode
@@ -112,24 +109,20 @@ class ProgramNode extends ASTNode
     , 2))
     ###
 
-    mainWast = ''
-    fnsWast = ''
-    for statement in @children.statements
-      if statement.isFunctionAssignment()
-        fnsWast += ASTNode.addIndent(statement.genWast())
-      else
-        mainWast += ASTNode.addIndent(statement.genWast(), 2)
-
     wast = '(module\n'
+    wast += '  (memory 0)\n'
     wast += '  (import $print_i32 "stdio" "print" (param i32))\n'
     wast += '  (import $print_i64 "stdio" "print" (param i64))\n'
+    # Generate main function
     wast += '  (func\n'
-    localsWast = @_genLocals()
+    localsWast = ASTNode.genLocals(@scope)
     if localsWast.length > 0
       wast += ASTNode.addIndent(localsWast, 2)
-    wast += mainWast
+    for statement in @children.statements
+      wast += ASTNode.addIndent(statement.genWast(), 2)
     wast += '  )\n'
-    wast += fnsWast
+    # Generate user-defined functions
+    wast += ASTNode.addIndent(@genFunctionDefWast())
     ###
     wast += '  (func $exp_i64 (param $base i64) (param $exp i64) (result i64)\n'
     wast += '    (local $res i64)\n'
@@ -151,52 +144,36 @@ class ProgramNode extends ASTNode
 class ReturnNode extends ASTNode
   genWast: ->
     wast = @children.returnVal.genWast()
-    wast += "(return unimplemented)"
+    wast += "(return (get_local #{@children.returnVal.symbol.name}))\n"
     return wast
+
 
 class WhileNode extends ASTNode
   genWast: ->
-    wast = "(loop $done $loop\n"
-    wast += "  (if #{@children.condition.genWast()}\n"
+    wast = @children.condition.genWast()
+    wast += "(loop $done $loop\n"
+    wast += "  (if (get_local #{@children.condition.symbol.name})\n"
     wast += "    (then\n"
     for statement in @children.body
-      next = ASTNode.addIndent(statement.genWast(), 3)
-      wast += "#{next}\n"
+      wast += ASTNode.addIndent(statement.genWast(), 3)
+    wast += ASTNode.addIndent(@children.condition.genWast(), 3)
     wast += '      (br $loop)\n'
     wast += '    )\n'
     wast += '    (else (br $done))\n'
     wast += '  )\n'
-    wast += ')'
-    return 'unimplemented'
-
-
-class FunctionAssignmentNode extends ASTNode
-  genSymbols: (@scope) ->
-    targetVarName = @children.target.children.var.children.id.literal
-    @symbol = @scope.getVarSymbol(targetVarName)
-    if not @symbol?
-      @symbol = @scope.addNamedSymbol(targetVarName)
-      @symbol.setType(Symbol.TYPES.FN)
-    if @symbol.childScopeName?
-      throw new Error("Cannot redefine function: #{target}")
-    fnScope = Scope.genFnScope(@symbol.name, @scope)
-    @symbol.setChildScopeName(fnScope.name)
-    # Extract arg symbols from function definition into function scope
-    fnDef = @children.source
-    fnScope.addArgs(@symbol, fnDef.children.args)
-    for statement in fnDef.children.body
-      statement.genSymbols(fnScope)
-      if statement.isReturn()
-        @symbol.unifyReturnType(statement.children.returnVal.symbol)
-    return
-
-  genWast: -> 'unimplemented'
+    wast += ')\n'
+    return wast
 
 
 class AssignmentNode extends ASTNode
   genSymbols: (@scope) ->
-    @traverseChildren(((child) => child.genSymbols(@scope)), true)
+    @traverseChildren((child) => child.genSymbols(@scope))
+    # If this is a function assignment, make the target variable's symbol point
+    # to the original function definition's symbol
     @children.target.symbol.unifyType(@children.source.symbol)
+    if @children.source.symbol.type == Symbol.TYPES.FN
+      @children.target.symbol.fnSymbol = @children.source.symbol
+      return
     return
 
   genWast: ->
@@ -234,7 +211,7 @@ class VariableNode extends ASTNode
 
 class OpExpressionNode extends ASTNode
   genSymbols: (@scope) ->
-    @traverseChildren(((child) => child.genSymbols(@scope)), true)
+    @traverseChildren((child) => child.genSymbols(@scope))
     nameSuffix = ''
     if not @children.lhs.isEmpty()
       nameSuffix += "#{@children.lhs.symbol.shortName}_"
@@ -262,7 +239,7 @@ class OpExpressionNode extends ASTNode
 
 class OpParenGroupNode extends ASTNode
   genSymbols: (@scope) ->
-    @traverseChildren(((child) => child.genSymbols(@scope)), true)
+    @traverseChildren((child) => child.genSymbols(@scope))
     opExprSymbol = @children.opExpr.symbol
     @symbol = @scope.addAnonSymbol(@name, opExprSymbol.shortName)
     # Unify parenGroup type with inner opExpr
@@ -274,7 +251,7 @@ class OpParenGroupNode extends ASTNode
 
 class FunctionCallNode extends ASTNode
   genSymbols: (@scope) ->
-    @traverseChildren(((child) => child.genSymbols(@scope)), true)
+    @traverseChildren((child) => child.genSymbols(@scope))
     fnSymbol = @children.fnName.symbol
     @symbol = @scope.addAnonSymbol(@name, fnSymbol.shortName)
     args = []
@@ -287,28 +264,62 @@ class FunctionCallNode extends ASTNode
 
   genWast: ->
     wast = ''
+    # First, make sure any expressions inside the args have been evaluated
     args = []
     for arg in @children.argList
       wast += arg.genWast()
       args.push(arg.symbol)
     fnNameSymbol = @children.fnName.symbol
+    # Generate function call comment
+    wast += ";;#{fnNameSymbol.name}("
+    for arg in args
+      wast += "#{arg.name}, "
+    wast = "#{wast[...-2]})\n"
+    # If function is builtin, inline it
     if fnNameSymbol.name of builtin.FN_CALL_MAP
       wast += builtin.fns[builtin.FN_CALL_MAP[fnNameSymbol.name]](@symbol, args)
       return wast
-    return 'unimplemented'
+    # Otherwise, call user-defined function with arguments
+    wast += "(set_local #{@symbol.name} (call #{fnNameSymbol.fnSymbol.name}"
+    for arg in args
+      wast += " (get_local #{arg.name})"
+    wast += '))\n'
+    return wast
 
 
 class FunctionDefNode extends ASTNode
-  genWast: ->
-    wast = ''
-    for arg in @children.args
-      wast += "  (param #{arg.genWast()} i64)"
-    wast += ' (result i64)\n'
-    for varName in ASTNode.findLocalVars(@children.body)
-      wast += "    (local $#{varName} i64)\n"
+  genSymbols: (@scope) ->
+    @symbol = @scope.addAnonSymbol(@name, '')
+    @symbol.setType(Symbol.TYPES.FN)
+    @fnScope = Scope.genFnScope(@symbol.name, @scope)
+    @symbol.setChildScopeName(@fnScope.name)
+    @traverseChildren((child) => child.genSymbols(@fnScope))
+    @fnScope.addArgs(@symbol, @children.args)
     for statement in @children.body
-      wast += "  #{statement.genWast()}\n"
-    return 'unimplemented'
+      if statement.isReturn()
+        @symbol.unifyReturnType(statement.children.returnVal.symbol)
+    return
+
+  genFunctionDefWast: ->
+    wast = "(func #{@symbol.name}"
+    for arg in @children.args
+      wast += " (param #{arg.symbol.name} #{arg.symbol.type})"
+    wast += " (result #{@symbol.returnSymbol.type})\n"
+    localsWast = ASTNode.genLocals(@fnScope)
+    if localsWast.length > 0
+      wast += ASTNode.addIndent(localsWast)
+    for statement in @children.body
+      wast += ASTNode.addIndent(statement.genWast())
+    wast += ')\n'
+    @traverseChildren((child) => wast += child.genFunctionDefWast(@scope))
+    return wast
+
+
+class FunctionDefArgNode extends ASTNode
+  genSymbols: (@scope) ->
+    @symbol = @scope.addNamedSymbol(@children.id.literal)
+    @symbol.setType(@children.type.literal)
+    return
 
 
 class NumberNode extends ASTNode
@@ -329,7 +340,6 @@ TYPES =
   _Program_: ProgramNode
   _Return_: ReturnNode
   _While_: WhileNode
-  _FunctionAssignment_: FunctionAssignmentNode
   _Assignment_: AssignmentNode
   _TypedVariable_: TypedVariableNode
   _Variable_: VariableNode
@@ -337,6 +347,7 @@ TYPES =
   _OpParenGroup_: OpParenGroupNode
   _FunctionCall_: FunctionCallNode
   _FunctionDef_: FunctionDefNode
+  _FunctionDefArg_: FunctionDefArgNode
   _NUMBER_: NumberNode
   _EMPTY_: ASTNode
 

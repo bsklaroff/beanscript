@@ -9,14 +9,13 @@ GRAMMAR = {
     '_Return_'
     '_If_'
     '_While_'
-    '_FunctionAssignment_'
     '_Assignment_'
     'expr'
     ''
   ]
 
   _Return_: [
-    'RETURN expr{returnVal}'
+    'RETURN fnDefOrExpr{returnVal}'
   ]
 
   _If_: [
@@ -38,11 +37,8 @@ GRAMMAR = {
     'WHILE expr{condition} INDENT NEWLINE statements{body[]} UNINDENT'
   ]
 
-  _FunctionAssignment_: [
-    '_TypedVariable_{target} EQUALS _FunctionDef_{source}'
-  ]
   _Assignment_: [
-    '_TypedVariable_{target} EQUALS expr{source}'
+    '_TypedVariable_{target} EQUALS fnDefOrExpr{source}'
   ]
   _TypedVariable_: [
     '_ID_{type} _Variable_{var}'
@@ -51,6 +47,11 @@ GRAMMAR = {
   _Variable_: [
     '_ID_{id} DOT _Variable_{prop}'
     '_ID_{id} _EMPTY_{prop}'
+  ]
+
+  fnDefOrExpr: [
+    '_FunctionDef_'
+    'expr'
   ]
 
   expr: [
@@ -104,8 +105,8 @@ GRAMMAR = {
     ''
   ]
   argListInner0: [
-    'expr COMMA argListInner0'
-    'expr'
+    'fnDefOrExpr COMMA argListInner0'
+    'fnDefOrExpr'
   ]
 
   _Array_: [
@@ -142,10 +143,10 @@ GRAMMAR = {
     ''
   ]
   argDefListInner0: [
-    '_TypedId_ COMMA argDefListInner0'
-    '_TypedId_'
+    '_FunctionDefArg_ COMMA argDefListInner0'
+    '_FunctionDefArg_'
   ]
-  _TypedId_: [
+  _FunctionDefArg_: [
     '_ID_{type} _ID_{id}'
     '_EMPTY_{type} _ID_{id} _EMPTY_{type}'
   ]

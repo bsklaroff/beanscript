@@ -53,6 +53,7 @@ class Symbol
 
   _initType: ->
     if @type == Symbol.TYPES.FN
+      @fnSymbol = @
       @returnSymbol = new Symbol("#{@name}:return", @scopeName, false)
       @argSymbols = []
     return
@@ -69,6 +70,11 @@ class Symbol
     else
       @addEqTypeSymbol(otherSymbol)
       otherSymbol.addEqTypeSymbol(@)
+    # If we found a function, unify arg and return types as well
+    if @type == Symbol.TYPES.FN
+      @fnSymbol = otherSymbol
+      @unifyReturnType(otherSymbol.returnSymbol)
+      @unifyArgTypes(otherSymbol.argSymbols)
     return
 
   unifyReturnType: (returnSymbol) ->
@@ -92,6 +98,8 @@ class Symbol
       return [[@name, 'i32']]
     else if @type == Symbol.TYPES.I64
       return [[@name, 'i64']]
+    else if @type == Symbol.TYPES.BOOL
+      return [[@name, 'i32']]
     return []
 
   toJSON: ->
