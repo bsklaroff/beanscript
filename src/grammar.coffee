@@ -38,15 +38,18 @@ GRAMMAR = {
   ]
 
   _Assignment_: [
-    '_TypedVariable_{target} EQUALS fnDefOrExpr{source}'
+    '_MaybeTypedId_{target} EQUALS fnDefOrExpr{source}'
   ]
-  _TypedVariable_: [
-    '_ID_{type} _Variable_{var}'
-    '_EMPTY_{type} _Variable_{var}'
+  _MaybeTypedId_: [
+    '_Type_{type} _ID_{var}'
+    '_EMPTY_{type} _ID_{var}'
   ]
-  _Variable_: [
-    '_ID_{id} DOT _Variable_{prop}'
-    '_ID_{id} _EMPTY_{prop}'
+  _Type_: [
+    '_ID_{primitive} LEFT_SQUARE _NUMBER_{length} RIGHT_SQUARE'
+    '_ID_{primitive} _EMPTY_{length}'
+  ]
+  _ArrayType_: [
+    '_ID_{elemType} LEFT_SQUARE _NUMBER_{length} RIGHT_SQUARE'
   ]
 
   fnDefOrExpr: [
@@ -97,6 +100,11 @@ GRAMMAR = {
   _FunctionCall_: [
     '_Variable_{fnName} argList{argList[]}'
   ]
+  _Variable_: [
+    '_ID_{id} LEFT_SQUARE _NUMBER_{prop} RIGHT_SQUARE'
+    '_ID_{id} DOT _Variable_{prop}'
+    '_ID_{id} _EMPTY_{prop}'
+  ]
   argList: [
     'LEFT_PAREN argListInner RIGHT_PAREN'
   ]
@@ -113,6 +121,9 @@ GRAMMAR = {
     'LEFT_SQUARE argListInner{items[]} RIGHT_SQUARE'
   ]
   _ArrayRange_: [
+    'LEFT_SQUARE expr{start} DOT_DOT expr{end} RIGHT_SQUARE'
+  ]
+  _ArrayElem_: [
     'LEFT_SQUARE expr{start} DOT_DOT expr{end} RIGHT_SQUARE'
   ]
 
@@ -143,12 +154,8 @@ GRAMMAR = {
     ''
   ]
   argDefListInner0: [
-    '_FunctionDefArg_ COMMA argDefListInner0'
-    '_FunctionDefArg_'
-  ]
-  _FunctionDefArg_: [
-    '_ID_{type} _ID_{id}'
-    '_EMPTY_{type} _ID_{id} _EMPTY_{type}'
+    '_MaybeTypedId_ COMMA argDefListInner0'
+    '_MaybeTypedId_'
   ]
 
   fnDef0: [

@@ -1,6 +1,7 @@
 builtin = require('./builtin')
 Symbol = require('./symbol')
 Scope = require('./scope')
+Type = require('./type')
 
 class ASTNode
   #TODO: unhardcode this, and give them types
@@ -16,8 +17,8 @@ class ASTNode
   ]
 
   @make: (name, literal) ->
-    if name of TYPES
-      return new TYPES[name](name, literal)
+    if name of NODE_TYPES
+      return new NODE_TYPES[name](name, literal)
     return new ASTNode(name, literal)
 
   # List all scopes with their symbols (for debugging)
@@ -54,7 +55,7 @@ class ASTNode
     @scope = null
     @symbol = null
     # Generate 'isNodeType' functions
-    for type of TYPES
+    for type of NODE_TYPES
       # Strip underscores
       niceType = type[1...-1]
       # For ALLCAPS node names, only uppercase the first letter
@@ -97,7 +98,7 @@ class ProgramNode extends ASTNode
     ###
     #console.log(JSON.stringify(node, null, 2))
     seen = []
-    console.log(JSON.stringify(@symbolTable, (a, value) ->
+    console.log(JSON.stringify(@scope, (a, value) ->
       if typeof value == 'object'
         if not value?
           return null
@@ -168,10 +169,8 @@ class WhileNode extends ASTNode
 class AssignmentNode extends ASTNode
   genSymbols: (@scope) ->
     @traverseChildren((child) => child.genSymbols(@scope))
-    # If this is a function assignment, make the target variable's symbol point
-    # to the original function definition's symbol
     @children.target.symbol.unifyType(@children.source.symbol)
-    if @children.source.symbol.type == Symbol.TYPES.FN
+    if @children.source.symbol.type?.isFn()
       @children.target.symbol.fnSymbol = @children.source.symbol
       return
     return
@@ -182,30 +181,16 @@ class AssignmentNode extends ASTNode
     return wast
 
 
-class TypedVariableNode extends ASTNode
+class MaybeTypedIdNode extends ASTNode
   genSymbols: (@scope) ->
-    varName = @children.var.children.id.literal
+    varName = @children.var.literal
     # This only works if we prevent starting a variable name with a number
     @symbol = @scope.getVarSymbol(varName)
     if not @symbol?
       @symbol = @scope.addNamedSymbol(varName)
-    # Set variable type
-    type = @children.type.literal
-    if type.length > 0
-      @symbol.setType(type)
-    return
-
-
-class VariableNode extends ASTNode
-  genSymbols: (@scope) ->
-    if @isNestedVariable()
-      #TODO
-      return
-    varName = @children.id.literal
-    # This only works if we prevent starting a variable name with a number
-    @symbol = @scope.getVarSymbol(varName)
-    if not @symbol?
-      @symbol = @scope.addNamedSymbol(varName)
+    # Set variable type if it exists
+    if not @children.type.isEmpty()
+      @symbol.setType(Type.fromTypeNode(@children.type))
     return
 
 
@@ -221,7 +206,7 @@ class OpExpressionNode extends ASTNode
     if not @children.lhs.isEmpty()
       @children.lhs.symbol.unifyType(@children.rhs.symbol)
     if @isComparisonOp()
-      @symbol.setType(Symbol.TYPES.BOOL)
+      @symbol.setType(new Type(Type.PRIMITIVES.BOOL))
     else
       @symbol.unifyType(@children.rhs.symbol)
     return
@@ -257,7 +242,7 @@ class FunctionCallNode extends ASTNode
     args = []
     for arg in @children.argList
       args.push(arg.symbol)
-    fnSymbol.setType(Symbol.TYPES.FN)
+    fnSymbol.setType(new Type(Type.PRIMITIVES.FN))
     fnSymbol.unifyReturnType(@symbol)
     fnSymbol.unifyArgTypes(args)
     return
@@ -287,10 +272,23 @@ class FunctionCallNode extends ASTNode
     return wast
 
 
+class VariableNode extends ASTNode
+  genSymbols: (@scope) ->
+    if @isNestedVariable()
+      #TODO
+      return
+    varName = @children.id.literal
+    # This only works if we prevent starting a variable name with a number
+    @symbol = @scope.getVarSymbol(varName)
+    if not @symbol?
+      @symbol = @scope.addNamedSymbol(varName)
+    return
+
+
 class FunctionDefNode extends ASTNode
   genSymbols: (@scope) ->
     @symbol = @scope.addAnonSymbol(@name, '')
-    @symbol.setType(Symbol.TYPES.FN)
+    @symbol.setType(new Type(Type.PRIMITIVES.FN))
     @fnScope = Scope.genFnScope(@symbol.name, @scope)
     @symbol.setChildScopeName(@fnScope.name)
     @traverseChildren((child) => child.genSymbols(@fnScope))
@@ -303,8 +301,8 @@ class FunctionDefNode extends ASTNode
   genFunctionDefWast: ->
     wast = "(func #{@symbol.name}"
     for arg in @children.args
-      wast += " (param #{arg.symbol.name} #{arg.symbol.type})"
-    wast += " (result #{@symbol.returnSymbol.type})\n"
+      wast += " (param #{arg.symbol.name} #{arg.symbol.type.primitive})"
+    wast += " (result #{@symbol.returnSymbol.type.primitive})\n"
     localsWast = ASTNode.genLocals(@fnScope)
     if localsWast.length > 0
       wast += ASTNode.addIndent(localsWast)
@@ -318,7 +316,8 @@ class FunctionDefNode extends ASTNode
 class FunctionDefArgNode extends ASTNode
   genSymbols: (@scope) ->
     @symbol = @scope.addNamedSymbol(@children.id.literal)
-    @symbol.setType(@children.type.literal)
+    if not @children.type.isEmpty()
+      @symbol.setType(Type.fromTypeNode(@children.type))
     return
 
 
@@ -328,24 +327,25 @@ class NumberNode extends ASTNode
     return
 
   genWast: ->
-    if @symbol.type == Symbol.TYPES.I32
+    if @symbol.type.isI32()
       return "(set_local #{@symbol.name} (i32.const #{@literal}))\n"
-    else if @symbol.type == Symbol.TYPES.I64
+    else if @symbol.type.isI64()
       return "(set_local #{@symbol.name} (i64.const #{@literal}))\n"
     throw new Error("Number constant does not exist for type #{@symbol.type}")
     return
 
 
-TYPES =
+NODE_TYPES =
   _Program_: ProgramNode
   _Return_: ReturnNode
   _While_: WhileNode
   _Assignment_: AssignmentNode
-  _TypedVariable_: TypedVariableNode
-  _Variable_: VariableNode
+  _MaybeTypedId_: MaybeTypedIdNode
+  _Type_: ASTNode
   _OpExpression_: OpExpressionNode
   _OpParenGroup_: OpParenGroupNode
   _FunctionCall_: FunctionCallNode
+  _Variable_: VariableNode
   _FunctionDef_: FunctionDefNode
   _FunctionDefArg_: FunctionDefArgNode
   _NUMBER_: NumberNode

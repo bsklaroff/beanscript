@@ -1,12 +1,4 @@
 class Symbol
-  @TYPES:
-    FN: 'fn'
-    OBJ: 'obj'
-    ARR: 'arr'
-    I64: 'i64'
-    I32: 'i32'
-    BOOL: 'bool'
-
   constructor: (@name, @scopeName, @namedVar) ->
     @shortName = if @namedVar then @name else @name.split('_')[0]
     @uniqName = "#{@scopeName}:#{@name}"
@@ -35,13 +27,13 @@ class Symbol
   ###
 
   setChildScopeName: (name) ->
-    if @type != Symbol.TYPES.FN
+    if not @type.isFn()
       throw new Error("Cannot unify arg types for non-fn symbol: #{@name}")
     @childScopeName = name
     return
 
   setType: (type) ->
-    if @type? and @type != type
+    if @type? and not @type.isEqual(type)
       throw new Error("Cannot overwrite type #{type} for symbol #{@name} with type #{@type}")
     if not @type?
       @type = type
@@ -52,7 +44,7 @@ class Symbol
     return
 
   _initType: ->
-    if @type == Symbol.TYPES.FN
+    if @type.isFn()
       @fnSymbol = @
       @returnSymbol = new Symbol("#{@name}:return", @scopeName, false)
       @argSymbols = []
@@ -71,21 +63,21 @@ class Symbol
       @addEqTypeSymbol(otherSymbol)
       otherSymbol.addEqTypeSymbol(@)
     # If we found a function, unify arg and return types as well
-    if @type == Symbol.TYPES.FN
+    if @type?.isFn()
       @fnSymbol = otherSymbol
       @unifyReturnType(otherSymbol.returnSymbol)
       @unifyArgTypes(otherSymbol.argSymbols)
     return
 
   unifyReturnType: (returnSymbol) ->
-    if @type != Symbol.TYPES.FN
+    if not @type.isFn()
       throw new Error("Cannot unify return type for non-fn symbol: #{@name}")
     @returnSymbol.unifyType(returnSymbol)
     returnSymbol.unifyType(@returnSymbol)
     return
 
   unifyArgTypes: (argSymbols) ->
-    if @type != Symbol.TYPES.FN
+    if not @type.isFn()
       throw new Error("Cannot unify arg types for non-fn symbol: #{@name}")
     for argSymbol, i in argSymbols
       @argSymbols[i] ?= new Symbol("#{@name}:arg#{i}", @scopeName, false)
@@ -94,11 +86,11 @@ class Symbol
     return
 
   wastVars: ->
-    if @type == Symbol.TYPES.I32
+    if @type?.isI32()
       return [[@name, 'i32']]
-    else if @type == Symbol.TYPES.I64
+    else if @type?.isI64()
       return [[@name, 'i64']]
-    else if @type == Symbol.TYPES.BOOL
+    else if @type?.isBool()
       return [[@name, 'i32']]
     return []
 
@@ -113,7 +105,7 @@ class Symbol
       type: @type
       _eqTypeSymbols: eqTypeSymbols
     }
-    if @type == Symbol.TYPES.FN
+    if @type?.isFn()
       res.returnSymbol = @returnSymbol
       res.argSymbols = @argSymbols
     return res
