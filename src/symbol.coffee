@@ -26,6 +26,33 @@ class Symbol
     return
   ###
 
+  getSubsymbol: (propSymbols) ->
+    if not @type.isArr() and not @type.isObj()
+      throw new Error("Cannot get subsymbols of non-obj, non-arr symbol: #{@name}")
+    curSymbol = @
+    for propSymbol in propSymbols
+      curSymbol = curSymbol.subsymbols[propSymbol.name]
+      if not curSymbol?
+        break
+    return curSymbol
+
+  addSubsymbol: (propSymbols, newSymbol) ->
+    if not @type.isArr() and not @type.isObj()
+      throw new Error("Cannot get subsymbols of non-obj, non-arr symbol: #{@name}")
+    curSymbol = @
+    for propSymbol, i in propSymbols
+      # First, traverse the nested subsymbols
+      if i < propSymbols.length - 1
+        curSymbol = curSymbol.subsymbols[propSymbol.name]
+        if not curSymbol?
+          throw new Error("Nested symbol not found: #{propSymbol.name}")
+      # Finally, add the new symbol at the end of the chain
+      else
+        if curSymbol.subsymbols[propSymbol.name]?
+          throw new Error("Nested symbol already defined: #{propSymbol.name}")
+        curSymbol.subsymbols[propSymbol.name] = newSymbol
+    return
+
   setChildScopeName: (name) ->
     if not @type.isFn()
       throw new Error("Cannot unify arg types for non-fn symbol: #{@name}")
@@ -34,7 +61,7 @@ class Symbol
 
   setType: (type) ->
     if @type? and not @type.isEqual(type)
-      throw new Error("Cannot overwrite type #{type} for symbol #{@name} with type #{@type}")
+      throw new Error("Cannot overwrite type #{@type.primitive} for symbol #{@name} with type #{type.primitive}")
     if not @type?
       @type = type
       @_initType()
@@ -48,6 +75,8 @@ class Symbol
       @fnSymbol = @
       @returnSymbol = new Symbol("#{@name}:return", @scopeName, false)
       @argSymbols = []
+    else if @type.isObj() or @type.isArr()
+      @subsymbols = {}
     return
 
   addEqTypeSymbol: (otherSymbol) ->

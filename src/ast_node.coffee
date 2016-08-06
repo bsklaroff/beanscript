@@ -68,13 +68,13 @@ class ASTNode
         @[fnName] = -> false
     return
 
-  isNestedVariable: -> @isVariable() and not @children.prop.isEmpty()
+  isNestedVariable: -> @isVariable() and @children.props.length > 0
   isComparisonOp: -> @isOpExpression() and @children.op.name in ASTNode.COMPARISON_OPS
 
   traverseChildren: (traverseFn) ->
     fnDefs = []
     for name, child of @children
-      if child.length > 0
+      if Object.prototype.toString.call(child) == '[object Array]'
         for subchild in child
           traverseFn(subchild)
       else
@@ -181,13 +181,10 @@ class AssignmentNode extends ASTNode
     return wast
 
 
-class MaybeTypedIdNode extends ASTNode
+class MaybeTypedVarNode extends ASTNode
   genSymbols: (@scope) ->
-    varName = @children.var.literal
-    # This only works if we prevent starting a variable name with a number
-    @symbol = @scope.getVarSymbol(varName)
-    if not @symbol?
-      @symbol = @scope.addNamedSymbol(varName)
+    @traverseChildren((child) => child.genSymbols(@scope))
+    @symbol = @children.var.symbol
     # Set variable type if it exists
     if not @children.type.isEmpty()
       @symbol.setType(Type.fromTypeNode(@children.type))
@@ -272,16 +269,37 @@ class FunctionCallNode extends ASTNode
     return wast
 
 
+class ArrayNode extends ASTNode
+  genSymbols: (@scope) ->
+    @traverseChildren((child) => child.genSymbols(@scope))
+    @symbol = @scope.addAnonSymbol(@name, '')
+    return
+
+
 class VariableNode extends ASTNode
   genSymbols: (@scope) ->
-    if @isNestedVariable()
-      #TODO
-      return
+    @traverseChildren((child) => child.genSymbols(@scope))
     varName = @children.id.literal
-    # This only works if we prevent starting a variable name with a number
-    @symbol = @scope.getVarSymbol(varName)
-    if not @symbol?
-      @symbol = @scope.addNamedSymbol(varName)
+    @symbol = null
+    if @isNestedVariable()
+      parentSymbol = @scope.getVarSymbol(varName)
+      if not parentSymbol?
+        throw new Error("No parent symbol found with name: #{nodeName}")
+      propSymbols = []
+      for prop in @children.props
+        propSymbols.push(prop.symbol)
+      @symbol = parentSymbol.getSubsymbol(propSymbols)
+      if not @symbol?
+        nameSuffix = parentSymbol.shortName
+        for propSymbol in propSymbols
+          nameSuffix += "[#{propSymbol.shortName}]"
+        @symbol = @scope.addAnonSymbol(@name, nameSuffix)
+        parentSymbol.addSubsymbol(propSymbols, @symbol)
+    else
+      # This only works if we prevent starting a variable name with a number
+      @symbol = @scope.getVarSymbol(varName)
+      if not @symbol?
+        @symbol = @scope.addNamedSymbol(varName)
     return
 
 
@@ -321,6 +339,19 @@ class FunctionDefArgNode extends ASTNode
     return
 
 
+class MaybeTypedIdNode extends ASTNode
+  genSymbols: (@scope) ->
+    varName = @children.id.literal
+    # This only works if we prevent starting a variable name with a number
+    @symbol = @scope.getVarSymbol(varName)
+    if not @symbol?
+      @symbol = @scope.addNamedSymbol(varName)
+    # Set variable type if it exists
+    if not @children.type.isEmpty()
+      @symbol.setType(Type.fromTypeNode(@children.type))
+    return
+
+
 class NumberNode extends ASTNode
   genSymbols: (@scope) ->
     @symbol = @scope.addAnonSymbol(@name, @literal)
@@ -340,14 +371,16 @@ NODE_TYPES =
   _Return_: ReturnNode
   _While_: WhileNode
   _Assignment_: AssignmentNode
-  _MaybeTypedId_: MaybeTypedIdNode
+  _MaybeTypedVar_: MaybeTypedVarNode
   _Type_: ASTNode
+  _Variable_: VariableNode
   _OpExpression_: OpExpressionNode
   _OpParenGroup_: OpParenGroupNode
   _FunctionCall_: FunctionCallNode
-  _Variable_: VariableNode
+  _Array_: ArrayNode
   _FunctionDef_: FunctionDefNode
   _FunctionDefArg_: FunctionDefArgNode
+  _MaybeTypedId_: MaybeTypedIdNode
   _NUMBER_: NumberNode
   _EMPTY_: ASTNode
 

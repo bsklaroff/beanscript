@@ -16,6 +16,11 @@ class Type
     return new Type(primitive, length)
 
   constructor: (@primitive, @length = null) ->
+    @elemType = null
+    # Check if this is an array
+    if @length?
+      @elemType = @primitive
+      @primitive = Type.PRIMITIVES.ARR
     found = false
     for k, v of Type.PRIMITIVES
       if @primitive == v
@@ -31,9 +36,9 @@ class Type
         @["is#{capitalV}"] = -> false
     return
 
-  isArray: -> @length?
-
   isEqual: (otherType) ->
-    return @primitive == otherType.primitive and @length == otherType.length
+    return @primitive == otherType.primitive and
+           @elemType == otherType.elemType and
+           @length == otherType.length
 
 module.exports = Type

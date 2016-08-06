@@ -60,6 +60,9 @@ class Parser
       # Initialize children object if we are parsing an ast node rule
       if symbol.astChildKey?
         childrenObj ?= {}
+      # If child object is an empty array, initialize it
+      if symbol.astChildIsArray
+        childrenObj[symbol.astChildKey] ?= []
       # Ignore whitespace
       [whitespace, idx] = @tryRule(grammar.WHITESPACE, idx)
       # Attempt to match parenthesized subgroup
@@ -101,14 +104,12 @@ class Parser
     if symbol.astChildKey?
       # Case 1a: ast child is an empty array
       if symbol.astChildIsArray and res.name == '_EMPTY_'
-        if childrenObj[symbol.astChildKey]?
-          throw new Error("Unexpected empty child array: #{JSON.stringify(res)}")
-        childrenObj[symbol.astChildKey] = []
+        if childrenObj[symbol.astChildKey].length > 0
+          throw new Error("Expected child array to be empty: #{JSON.stringify(res)}")
       # Case 1b: ast child is an array
       else if symbol.astChildIsArray
         if res.name? or not res.length?
           throw new Error("Result #{JSON.stringify(res)} should be an array of nodes")
-        childrenObj[symbol.astChildKey] ?= []
         for subNode in res
           childrenObj[symbol.astChildKey].push(subNode)
       # Case 1c: ast child is an ast node, and res is an ast node

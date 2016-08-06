@@ -14,6 +14,7 @@ class Scope
     return
 
   getVarSymbol: (varName) -> @locals["$#{varName}"]
+
   ### No closures for now
     if not name?
       return null
