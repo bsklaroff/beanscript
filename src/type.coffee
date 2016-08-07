@@ -19,7 +19,7 @@ class Type
     @elemType = null
     # Check if this is an array
     if @length?
-      @elemType = @primitive
+      @elemType = new Type(@primitive)
       @primitive = Type.PRIMITIVES.ARR
     found = false
     for k, v of Type.PRIMITIVES
@@ -38,7 +38,8 @@ class Type
 
   isEqual: (otherType) ->
     return @primitive == otherType.primitive and
-           @elemType == otherType.elemType and
-           @length == otherType.length
+           @length == otherType.length and
+           ((not @elemType? and not otherType.elemType?) or
+            @elemType.isEqual(otherType.elemType))
 
 module.exports = Type

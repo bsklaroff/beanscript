@@ -37,6 +37,15 @@ class Scope
     @_constCount += 1
     return @locals[name]
 
+  addSubsymbol: (nodeName, parentSymbol, propSymbols) ->
+    nameSuffix = parentSymbol.shortName
+    for propSymbol in propSymbols
+      nameSuffix += "_#{propSymbol.shortName}"
+    symbol = @addAnonSymbol(nodeName, nameSuffix)
+    symbol.parentSymbols = [parentSymbol].concat(propSymbols)
+    parentSymbol.addSubsymbol(propSymbols, symbol)
+    return symbol
+
   addArgs: (fnSymbol, args) ->
     @argNames = []
     argSymbols = []

@@ -29,9 +29,27 @@ builtin =
         wast += "(call_import $print_i32 (get_local #{x.name}))\n"
         return wast
       else if x.type.isI64()
-        wast += "(call_import $print_i64 (i64.const 64))\n"
+        wast += "(call_import $print_i32 (i32.const 64))\n"
         wast += "(call_import $print_i64 (get_local #{x.name}))\n"
         wast += "(call_import $print_i64 (i64.shr_u (get_local #{x.name}) (i64.const 32)))\n"
+        return wast
+      else if x.type.isArr()
+        wast += "(call_import $print_i32 (i32.const 23))\n"
+        if x.type.elemType.isI32()
+          wast += "(call_import $print_i32 (i32.const 32))\n"
+          wast += "(call_import $print_i32 (i32.const #{x.type.length}))\n"
+          for i in [0...x.type.length]
+            offset = 4 * i
+            wast += "(call_import $print_i32 (i32.load (i32.add (get_local #{x.name}) (i32.const #{offset}))))\n"
+        else if x.type.elemType.isI64()
+          wast += "(call_import $print_i32 (i32.const 64))\n"
+          wast += "(call_import $print_i32 (i32.const #{x.type.length}))\n"
+          for i in [0...x.type.length]
+            offset = 8 * i
+            wast += "(call_import $print_i64 (i64.load (i32.add (get_local #{x.name}) (i32.const #{offset}))))\n"
+            wast += "(call_import $print_i64 (i64.shr_u (i64.load (i32.add (get_local #{x.name}) (i32.const #{offset}))) (i64.const 32)))\n"
+        else
+          throw new Error("Fn print not defined for array with elements of type #{x.type.elemType.primitive}")
         return wast
       throw new Error("Fn print not defined for type #{x.type.primitive}")
       return wast
@@ -41,8 +59,13 @@ builtin =
         return ''
       wast = ";;#{target.name} = #{source.name}\n"
       if (target.type.isI32() and source.type.isI32()) or
-         (target.type.isI64() and source.type.isI64())
-        wast += "(set_local #{target.name} (get_local #{source.name}))\n"
+         (target.type.isI64() and source.type.isI64()) or
+         (target.type.isArr() and source.type.isArr())
+        if target.parentSymbols?
+          wast += "(set_local #{target.name} #{target.genMemptr()})\n"
+          wast += "(#{target.type.primitive}.store (get_local #{target.name}) (get_local #{source.name}))\n"
+        else
+          wast += "(set_local #{target.name} (get_local #{source.name}))\n"
         return wast
       throw new Error("Fn assign not defined for types #{target.type.primitive}, #{source.type.primitive}")
       return

@@ -7,6 +7,9 @@ class ASTNode
   #TODO: unhardcode this, and give them types
   @NUM_TEMPS = 0
 
+  #TODO: make this a global variable that can be changed during runtime
+  @memptr = 0
+
   @COMPARISON_OPS = [
     '_EQUALS_EQUALS_'
     '_NOT_EQUALS_'
@@ -111,7 +114,7 @@ class ProgramNode extends ASTNode
     ###
 
     wast = '(module\n'
-    wast += '  (memory 0)\n'
+    wast += '  (memory 100)\n'
     wast += '  (import $print_i32 "stdio" "print" (param i32))\n'
     wast += '  (import $print_i64 "stdio" "print" (param i64))\n'
     # Generate main function
@@ -177,6 +180,7 @@ class AssignmentNode extends ASTNode
 
   genWast: ->
     wast = @children.source.genWast()
+    wast += @children.target.genWast()
     wast += builtin.fns.assign(@children.target.symbol, @children.source.symbol)
     return wast
 
@@ -189,6 +193,8 @@ class MaybeTypedVarNode extends ASTNode
     if not @children.type.isEmpty()
       @symbol.setType(Type.fromTypeNode(@children.type))
     return
+
+  genWast: -> @children.var.genWast()
 
 
 class OpExpressionNode extends ASTNode
@@ -275,6 +281,13 @@ class ArrayNode extends ASTNode
     @symbol = @scope.addAnonSymbol(@name, '')
     return
 
+  genWast: ->
+    elemType = @symbol.type.elemType
+    elemLength = if elemType.isI64() then 8 else 4
+    memptr = ASTNode.memptr
+    ASTNode.memptr += @symbol.type.length * elemLength
+    return "(set_local #{@symbol.name} (i32.const #{memptr}))\n"
+
 
 class VariableNode extends ASTNode
   genSymbols: (@scope) ->
@@ -287,20 +300,24 @@ class VariableNode extends ASTNode
         throw new Error("No parent symbol found with name: #{nodeName}")
       propSymbols = []
       for prop in @children.props
+        prop.symbol.setType(new Type(Type.PRIMITIVES.I32))
         propSymbols.push(prop.symbol)
       @symbol = parentSymbol.getSubsymbol(propSymbols)
       if not @symbol?
-        nameSuffix = parentSymbol.shortName
-        for propSymbol in propSymbols
-          nameSuffix += "[#{propSymbol.shortName}]"
-        @symbol = @scope.addAnonSymbol(@name, nameSuffix)
-        parentSymbol.addSubsymbol(propSymbols, @symbol)
+        @symbol = @scope.addSubsymbol(@name, parentSymbol, propSymbols)
     else
       # This only works if we prevent starting a variable name with a number
       @symbol = @scope.getVarSymbol(varName)
       if not @symbol?
         @symbol = @scope.addNamedSymbol(varName)
     return
+
+  genWast: ->
+    wast = ''
+    if @isNestedVariable()
+      for prop in @children.props
+        wast += prop.genWast()
+    return wast
 
 
 class FunctionDefNode extends ASTNode
@@ -320,7 +337,8 @@ class FunctionDefNode extends ASTNode
     wast = "(func #{@symbol.name}"
     for arg in @children.args
       wast += " (param #{arg.symbol.name} #{arg.symbol.type.primitive})"
-    wast += " (result #{@symbol.returnSymbol.type.primitive})\n"
+    returnType = if @symbol.returnSymbol.type.isArr() then 'i32' else @symbol.returnSymbol.type.primitive
+    wast += " (result #{returnType})\n"
     localsWast = ASTNode.genLocals(@fnScope)
     if localsWast.length > 0
       wast += ASTNode.addIndent(localsWast)

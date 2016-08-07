@@ -9,29 +9,65 @@ stdin.on('data', (input) ->
 )
 
 curPrintType = null
+tmpArr = null
+arrType = null
+arrLength = null
 tmpLow = null
 
 typedPrint = (x) ->
   if not curPrintType?
     curPrintType = x
+  # Arr
+  else if curPrintType == 23
+    if not arrType?
+      tmpArr = []
+      arrType = x
+    else if not arrLength?
+      arrLength = x
+    else
+      if arrType == 32
+        tmpArr.push(x)
+        arrLength--
+      else if arrType == 64
+        if not tmpLow?
+          tmpLow = x
+        else
+          tmpArr.push(getI64(tmpLow, x))
+          tmpLow = null
+          arrLength--
+      if arrLength == 0
+        outputStr = '[ '
+        for item in tmpArr
+          outputStr += "#{item}, "
+        outputStr = outputStr[...-2]
+        outputStr += ' ]'
+        console.log(outputStr)
+        tmpArr = null
+        arrType = null
+        arrLength = null
+        curPrintType = null
+  # I32
   else if curPrintType == 32
     console.log(x)
     curPrintType = null
+  # I64
   else if curPrintType == 64
     if not tmpLow?
       tmpLow = x
     else
-      highStr = (x >>> 0).toString(2)
-      lowStr = (tmpLow >>> 0).toString(2)
-      # Check for negative number
-      if highStr.length == 32 && highStr[0] == '1'
-        console.log('-' + getI64(highStr.slice(1), lowStr))
-      else
-        console.log(getI64(highStr, lowStr))
+      console.log(getI64(tmpLow, x))
       tmpLow = null
       curPrintType = null
 
-getI64 = (highBinaryStr, lowBinaryStr) ->
+getI64 = (tmpLow, x) ->
+  highStr = (x >>> 0).toString(2)
+  lowStr = (tmpLow >>> 0).toString(2)
+  # Check for negative number
+  if highStr.length == 32 && highStr[0] == '1'
+    return '-' + sumHighLowStrs(highStr.slice(1), lowStr)
+  return sumHighLowStrs(highStr, lowStr)
+
+sumHighLowStrs = (highBinaryStr, lowBinaryStr) ->
   lowNum = parseInt(lowBinaryStr, 2)
   highNum = parseInt(highBinaryStr, 2)
   lowStr = lowNum.toString()

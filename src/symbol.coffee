@@ -51,6 +51,8 @@ class Symbol
         if curSymbol.subsymbols[propSymbol.name]?
           throw new Error("Nested symbol already defined: #{propSymbol.name}")
         curSymbol.subsymbols[propSymbol.name] = newSymbol
+        if curSymbol.type.isArr()
+          newSymbol.setType(curSymbol.type.elemType)
     return
 
   setChildScopeName: (name) ->
@@ -114,12 +116,20 @@ class Symbol
       argSymbol.unifyType(@argSymbols[i])
     return
 
+  # TODO: make this work for more than single-element arrays
+  genMemptr: ->
+    if not @parentSymbols?
+      throw new Error("Cannot genMemptr for symbol with no parentSymbols: #{@name}")
+    elemSize = if @type.isI64() then 8 else 4
+    return "(i32.add (get_local #{@parentSymbols[0].name}) " +
+           "(i32.mul (get_local #{@parentSymbols[1].name}) (i32.const #{elemSize})))"
+
   wastVars: ->
-    if @type?.isI32()
+    if @type?.isI32() or @type?.isArr() or @parentSymbols?
       return [[@name, 'i32']]
-    else if @type?.isI64()
+    if @type?.isI64()
       return [[@name, 'i64']]
-    else if @type?.isBool()
+    if @type?.isBool()
       return [[@name, 'i32']]
     return []
 
