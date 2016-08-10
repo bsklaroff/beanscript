@@ -54,7 +54,7 @@ class ASTNode
     return wastSplit.join('\n')
 
   constructor: (@name, @literal = null) ->
-    @children = null
+    @children = if @literal? then null else {}
     @scope = null
     @symbol = null
     # Generate 'isNodeType' functions
@@ -243,7 +243,7 @@ class FunctionCallNode extends ASTNode
     fnSymbol = @children.fnName.symbol
     @symbol = @scope.addAnonSymbol(@name, fnSymbol.shortName)
     args = []
-    for arg in @children.argList
+    for arg in @children.args
       args.push(arg.symbol)
     fnSymbol.setType(new Type(Type.PRIMITIVES.FN))
     fnSymbol.unifyReturnType(@symbol)
@@ -254,7 +254,7 @@ class FunctionCallNode extends ASTNode
     wast = ''
     # First, make sure any expressions inside the args have been evaluated
     args = []
-    for arg in @children.argList
+    for arg in @children.args
       wast += arg.genWast()
       args.push(arg.symbol)
     fnNameSymbol = @children.fnName.symbol

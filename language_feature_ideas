@@ -1,10 +1,23 @@
 - indent based
+  - js-esque bracket-based version with alternative filename
+- underscore_case pragma
 - promises built in
   - any function can be easily wrapped in a promise
   - cancelable
+  - async / await or .then syntax?
 - functional language constructs built in
+- by default, functions do not inherit parent scope
+  - can be made a closure with =>, which also takes care of @
 - strong typing with type inference
   - kinds
-- easy ENUM creation
 - compatible with js
+  - can require js or bs as modules
+  - use npm
+- js2bs and coffee2bs interactive migration helpers
+- easy ENUM creation
+- allow operator overloading
+- generalized ffi to easily incorporate c libs
 - automatic memoization decorator
+- macros?
+  - alternative lisp output / code syntax?
+- super long-term: SIMD / GPU / FPGA support

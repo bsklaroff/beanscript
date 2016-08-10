@@ -65,10 +65,10 @@ for fname in fs.readdirSync('test')
     continue
   tests = require("./test/#{fname}")
   for testName, test of tests
-    parser = new Parser(test.program)
-    parser.parse()
+    parser = new Parser()
+    astTree = parser.parse(test.program)
     console.log("Testing #{fname[...-'.coffee'.length]}\##{testName}")
-    if not checkSameAST(parser.astTree, test.ast)
+    if not checkSameAST(astTree, test.ast)
       console.log('FAILED')
       failedCount++
     totalCount++

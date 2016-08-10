@@ -11,7 +11,8 @@ GRAMMAR = {
     '_While_'
     '_Assignment_'
     'expr'
-    ''
+    '_Comment_'
+    'EMPTY'
   ]
 
   _Return_: [
@@ -45,11 +46,9 @@ GRAMMAR = {
     '_EMPTY_{type} _Variable_{var}'
   ]
   _Type_: [
-    '_ID_{primitive} LEFT_SQUARE _NUMBER_{length} RIGHT_SQUARE'
-    '_ID_{primitive} _EMPTY_{length}'
-  ]
-  _ArrayType_: [
-    '_ID_{elemType} LEFT_SQUARE _NUMBER_{length} RIGHT_SQUARE'
+    '_ID_{primitive} LEFT_ANGLE (_Type_ (COMMA _Type_)*){subtypes[]} RIGHT_ANGLE argList{args[]}'
+    '_ID_{primitive} LEFT_ANGLE (_Type_ (COMMA _Type_)*){subtypes[]} RIGHT_ANGLE EMPTY{args[]}'
+    '_ID_{primitive} EMPTY{subtypes[]} EMPTY{args[]}'
   ]
   _Variable_: [
     '_ID_{id} varProp*{props[]}'
@@ -105,14 +104,14 @@ GRAMMAR = {
   ]
 
   _FunctionCall_: [
-    '_Variable_{fnName} argList{argList[]}'
+    '_Variable_{fnName} argList{args[]}'
   ]
   argList: [
     'LEFT_PAREN argListInner RIGHT_PAREN'
   ]
   argListInner: [
     'argListInner0'
-    ''
+    'EMPTY'
   ]
   argListInner0: [
     'fnDefOrExpr COMMA argListInner0'
@@ -136,24 +135,24 @@ GRAMMAR = {
   singleQuoteString: [
     '_ESCAPED_SINGLE_QUOTES_ singleQuoteString'
     '_STRING_NO_SINGLE_QUOTE_ singleQuoteString'
-    ''
+    'EMPTY'
   ]
   doubleQuoteString : [
     '_ESCAPED_DOUBLE_QUOTES_ doubleQuoteString'
     '_STRING_NO_DOUBLE_QUOTE_ doubleQuoteString'
-    ''
+    'EMPTY'
   ]
 
   _FunctionDef_: [
     'argDefList{args[]} fnDef0{body[]}'
-    '_EMPTY_{args[]} fnDef0{body[]}'
+    'EMPTY{args[]} fnDef0{body[]}'
   ]
   argDefList: [
     'LEFT_PAREN argDefListInner RIGHT_PAREN'
   ]
   argDefListInner: [
     'argDefListInner0'
-    ''
+    'EMPTY'
   ]
   argDefListInner0: [
     '_MaybeTypedId_ COMMA argDefListInner0'
@@ -163,10 +162,13 @@ GRAMMAR = {
     '_Type_{type} _ID_{id}'
     '_EMPTY_{type} _ID_{id}'
   ]
-
   fnDef0: [
     'RIGHT_ARROW INDENT NEWLINE statements UNINDENT'
     'RIGHT_ARROW statement'
+  ]
+
+  _Comment_: [
+    'HASH NON_NEWLINE'
   ]
 
   NEWLINE: '[ \t\n]*\n'
@@ -183,6 +185,8 @@ GRAMMAR = {
   RIGHT_PAREN: '\\)'
   LEFT_SQUARE: '\\['
   RIGHT_SQUARE: '\\]'
+  LEFT_ANGLE: '<'
+  RIGHT_ANGLE: '>'
   DOT_DOT: '\\.\\.'
   COMMA: ','
   _MOD_: '%'
@@ -208,13 +212,16 @@ GRAMMAR = {
   _ESCAPED_DOUBLE_QUOTES_: '\\\\"+'
   _STRING_NO_DOUBLE_QUOTE_: '[^"]+'
   RIGHT_ARROW: '->'
+  HASH: '#'
+  NON_NEWLINE: '[^\n]*'
   INDENT: ''
   UNINDENT: ''
   _EMPTY_: ''
+  EMPTY: ''
 }
 
 class GrammarRule
-  RULE_TOKENS:
+  RULE_SEQS:
     WHITESPACE: ' +'
     ID: '[_a-zA-Z0-9]+'
     LEFT_CURLY_BRACE: '{'
@@ -244,9 +251,9 @@ class GrammarRule
     astChildren = null
     for pattern in @patterns
       patternASTChildren = {}
-      for symbol in pattern
-        if symbol.astChildKey?
-          patternASTChildren[symbol.astChildKey] = true
+      for token in pattern
+        if token.astChildKey?
+          patternASTChildren[token.astChildKey] = true
       if astChildren?
         for key, t of astChildren
           if key not of patternASTChildren
@@ -261,81 +268,124 @@ class GrammarRule
   _parsePatternString: (patternString) ->
     @patternStringToParse = patternString
     @parenDepth = 0
-    symbols = @_parseSymbols()
+    tokens = @_parseTokens()
     if @parenDepth != 0
       throw new Error("Pattern #{patternString} has mismatched parentheses")
     delete @patternStringToParse
     delete @parenDepth
-    return symbols
+    return tokens
 
-  _parseSymbols: ->
-    symbols = []
+  _createToken: (t = {}) ->
+    return {
+      name: t.name ? null
+      astChildKey: t.astChildKey ? null
+      astChildIsArray: t.astChildIsArray ? false
+      isGroup: t.isGroup ? false
+      subtokens: t.subtokens ? null
+    }
+
+  _parseTokens: ->
+    tokens = []
     while @patternStringToParse.length > 0
       foundRightParen = false
-      wipSymbol =
-        name: null
-        zeroOrMore: false
-        astChildKey: null
-        astChildIsArray: false
-        isGroup: false
-        subsymbols: null
-      [ruleTokenName, ruleTokenVal] = @_getNextRuleToken()
-      if ruleTokenName == 'WHITESPACE'
+      wipToken = @_createToken()
+      [ruleSeqName, ruleSeqVal] = @_getNextRuleSeq()
+      if ruleSeqName == 'WHITESPACE'
         continue
-      else if ruleTokenName == 'ID'
-        wipSymbol.name = ruleTokenVal
-        foundRightParen = @_parseSymbolSuffix(wipSymbol)
-      else if ruleTokenName == 'LEFT_PAREN'
+      else if ruleSeqName == 'ID'
+        wipToken.name = ruleSeqVal
+        foundRightParen = @_parseTokenSuffix(wipToken)
+      else if ruleSeqName == 'LEFT_PAREN'
         @parenDepth++
-        wipSymbol.isGroup = true
-        wipSymbol.subsymbols = @_parseSymbols()
-        foundRightParen = @_parseSymbolSuffix(wipSymbol)
+        wipToken.isGroup = true
+        wipToken.subtokens = @_parseTokens()
+        foundRightParen = @_parseTokenSuffix(wipToken)
       else
-        throw new Error("Rule token #{ruleTokenName} (#{ruleTokenVal}) cannot start a pattern")
-      symbols.push(wipSymbol)
+        throw new Error("Rule token #{ruleSeqName} (#{ruleSeqVal}) cannot start a pattern")
+      tokens.push(wipToken)
       if foundRightParen
         break
-    return symbols
+    return tokens
 
-  _parseSymbolSuffix: (wipSymbol) ->
+  _parseTokenSuffix: (wipToken) ->
     while @patternStringToParse.length > 0
-      [ruleTokenName, ruleTokenVal] = @_getNextRuleToken()
-      if ruleTokenName == 'WHITESPACE'
+      [ruleSeqName, ruleSeqVal] = @_getNextRuleSeq()
+      if ruleSeqName == 'WHITESPACE'
         break
-      else if ruleTokenName == 'STAR'
-        wipSymbol.zeroOrMore = true
-      else if ruleTokenName == 'LEFT_CURLY_BRACE'
-        @_parseASTChild(wipSymbol)
-      else if ruleTokenName == 'RIGHT_PAREN'
+      else if ruleSeqName == 'STAR'
+        @_createStarToken(wipToken)
+      else if ruleSeqName == 'LEFT_CURLY_BRACE'
+        @_parseASTChild(wipToken)
+      else if ruleSeqName == 'RIGHT_PAREN'
         if @parenDepth <= 0
           throw new Error("Extra right parenthesis while parsing: #{@patternStringToParse}")
         @parenDepth--
         return true
       else
-        throw new Error("Rule token #{ruleTokenName} (#{ruleTokenVal}) cannot be suffix")
+        throw new Error("Rule token #{ruleSeqName} (#{ruleSeqVal}) cannot be suffix")
     return false
 
-  _parseASTChild: (wipSymbol) ->
-    [ruleTokenName, ruleTokenVal] = @_getNextRuleToken()
-    if ruleTokenName != 'ID'
-      throw new Error("Rule token #{ruleTokenName} (#{ruleTokenVal}) cannot start AST child")
-    wipSymbol.astChildKey = ruleTokenVal
-    [ruleTokenName, ruleTokenVal] = @_getNextRuleToken()
-    if ruleTokenName == 'SQUARE_BRACKETS'
-      wipSymbol.astChildIsArray = true
-      [ruleTokenName, ruleTokenVal] = @_getNextRuleToken()
-    if ruleTokenName != 'RIGHT_CURLY_BRACE'
-      throw new Error("Rule token #{ruleTokenName} (#{ruleTokenVal}) cannot end AST child")
+  ###
+    Make wipToken into a new token that translates to 'zero or more of the current wipToken'.
+    To do this, we have to add an entirely new GrammarRule that has this new token's name.
+    If the current token is a group, then the new rule will look like this:
+    newRule.patterns = [
+      [<oldToken.subtokens> <newRule token>]
+      [<EMPTY token>]
+    ]
+    If the current token is not a group, then the new rule will look like this:
+    newRule.patterns = [
+      [<oldToken> <newRule token>]
+      [<EMPTY token>]
+    ]
+  ###
+  _createStarToken: (wipToken) ->
+    # First, either grab the wipToken.subtokens or take a copy of wipToken itself as the
+    # tokens for the subrule
+    subrulePattern = if wipToken.isGroup then wipToken.subtokens else [@_createToken(wipToken)]
+    # Make wipToken into essentially a new token by giving it a new name
+    # Make sure name is unique using anonStartIdx
+    ogName = if wipToken.isGroup then 'group' else wipToken.name
+    wipToken.name = "star_#{ogName}_#{anonStarIdx}"
+    wipToken.isGroup = false
+    wipToken.subtokens = null
+    anonStarIdx++
+    # Add a recursive reference to this token to the end of the subrule
+    subrulePattern = subrulePattern.concat(@_createToken(wipToken))
+    # Make sure no subTokens think they have {astChild} modifiers
+    for token in subrulePattern
+      token.astChildKey = null
+      token.astChildIsArray = false
+    # Initialize the GrammarRule with no patterns
+    subrule = new GrammarRule(wipToken.name, '')
+    # Manually set the patterns as specified in the comment above this function
+    subrule.patterns = [subrulePattern, [@_createToken({name: 'EMPTY'})]]
+    # Add this GrammarRule to the global grammar object
+    grammar[wipToken.name] = subrule
     return
 
-  _getNextRuleToken: ->
-    for tokenName, regex of @RULE_TOKENS
-      tokenMatch = @patternStringToParse.match(new RegExp("^#{regex}"))
-      if tokenMatch?
-        @patternStringToParse = @patternStringToParse[tokenMatch[0].length..]
-        return [tokenName, tokenMatch[0]]
+  _parseASTChild: (wipToken) ->
+    [ruleSeqName, ruleSeqVal] = @_getNextRuleSeq()
+    if ruleSeqName != 'ID'
+      throw new Error("Rule token #{ruleSeqName} (#{ruleSeqVal}) cannot start AST child")
+    wipToken.astChildKey = ruleSeqVal
+    [ruleSeqName, ruleSeqVal] = @_getNextRuleSeq()
+    if ruleSeqName == 'SQUARE_BRACKETS'
+      wipToken.astChildIsArray = true
+      [ruleSeqName, ruleSeqVal] = @_getNextRuleSeq()
+    if ruleSeqName != 'RIGHT_CURLY_BRACE'
+      throw new Error("Rule seq #{ruleSeqName} (#{ruleSeqVal}) cannot end AST child")
+    return
+
+  _getNextRuleSeq: ->
+    for name, regex of @RULE_SEQS
+      match = @patternStringToParse.match(new RegExp("^#{regex}"))
+      if match?
+        @patternStringToParse = @patternStringToParse[match[0].length..]
+        return [name, match[0]]
     throw new Error("No valid rule token found while parsing: #{@patternStringToParse}")
 
+anonStarIdx = 0
 grammar = {}
 for name, patternStrings of GRAMMAR
   grammar[name] = new GrammarRule(name, patternStrings)

@@ -11,16 +11,25 @@ class Type
     if not node.isType()
       throw new Error('Cannot parse type from non-TypedId node')
     primitive = node.children.primitive.literal
-    isArray = not node.children.length.isEmpty()
-    length = if isArray then parseInt(node.children.length.literal) else null
-    return new Type(primitive, length)
+    subtypes = []
+    for subtype in node.children.subtypes
+      subtypes.push(Type.fromTypeNode(subtype))
+    argSymbols = []
+    for arg in node.children.args
+      argSymbols.push(arg.symbol)
+    return new Type(primitive, subtypes, argSymbols)
 
-  constructor: (@primitive, @length = null) ->
+  constructor: (@primitive, @subtypes = [], @argSymbols = []) ->
     @elemType = null
+    @lengthSymbol = null
     # Check if this is an array
-    if @length?
-      @elemType = new Type(@primitive)
-      @primitive = Type.PRIMITIVES.ARR
+    if @primitive == Type.PRIMITIVES.ARR
+      if @subtypes.length != 1
+        throw new Error('Expected arr type to have exactly one subtype')
+      if @argSymbols.length != 1
+        throw new Error('Expected arr type to have exactly one argument')
+      @elemType = @subtypes[0]
+      @lengthSymbol = @argSymbols[0]
     found = false
     for k, v of Type.PRIMITIVES
       if @primitive == v
@@ -37,9 +46,9 @@ class Type
     return
 
   isEqual: (otherType) ->
-    return @primitive == otherType.primitive and
-           @length == otherType.length and
-           ((not @elemType? and not otherType.elemType?) or
-            @elemType.isEqual(otherType.elemType))
+    for subtype, i in @subtypes
+      if not subtype.isEqual(otherType.subtypes[i])
+        return false
+    return @primitive == otherType.primitive and @subtypes.length == otherType.subtypes.length
 
 module.exports = Type
