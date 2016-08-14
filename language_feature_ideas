@@ -15,9 +15,10 @@
   - use npm
 - js2bs and coffee2bs interactive migration helpers
 - easy ENUM creation
+- custom "data views" over efficient underlying arrays
+- macros?
+  - alternative lisp output / code syntax?
 - allow operator overloading
 - generalized ffi to easily incorporate c libs
 - automatic memoization decorator
-- macros?
-  - alternative lisp output / code syntax?
 - super long-term: SIMD / GPU / FPGA support

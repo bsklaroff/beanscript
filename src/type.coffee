@@ -14,22 +14,15 @@ class Type
     subtypes = []
     for subtype in node.children.subtypes
       subtypes.push(Type.fromTypeNode(subtype))
-    argSymbols = []
-    for arg in node.children.args
-      argSymbols.push(arg.symbol)
-    return new Type(primitive, subtypes, argSymbols)
+    return new Type(primitive, subtypes)
 
-  constructor: (@primitive, @subtypes = [], @argSymbols = []) ->
+  constructor: (@primitive, @subtypes = []) ->
     @elemType = null
-    @lengthSymbol = null
     # Check if this is an array
     if @primitive == Type.PRIMITIVES.ARR
       if @subtypes.length != 1
         throw new Error('Expected arr type to have exactly one subtype')
-      if @argSymbols.length != 1
-        throw new Error('Expected arr type to have exactly one argument')
       @elemType = @subtypes[0]
-      @lengthSymbol = @argSymbols[0]
     found = false
     for k, v of Type.PRIMITIVES
       if @primitive == v

@@ -1,30 +1,15 @@
 class Symbol
+  #TODO: unhardcode this, and make it dynamic
+  @ARRAY_LENGTH = 100
+  #TODO: put this somewhere else
+  @ARRAY_OFFSET = 2
+
   constructor: (@name, @scopeName, @namedVar) ->
     @shortName = if @namedVar then @name else @name.split('_')[0]
     @uniqName = "#{@scopeName}:#{@name}"
     @type = null
     @_eqTypeSymbols = {}
     return
-
-  ###
-  addProperty: (varNode, type) ->
-    if @type != Symbol.TYPES.OBJ
-      throw new Error("Cannot add property to non-obj symbol: #{@name}")
-    if not ASTNode.isTypedVariable(typedVarNode)
-      throw new Error("Expected node to be a typed variable: #{typedVarNode}")
-    @props ?= {}
-    varName = varNode.children.id.literal
-    if ASTNode.isNestedVariable(varNode)
-      if varName not of @props
-        throw new Error("Expected property #{varName} in symbol #{@name}")
-      @props[varName].addProperty(varNode.children.prop, type)
-    else
-      if varName not of @props
-        @props[varName] = new Symbol(varName, type)
-      else if type != '' and @props[varName].type != type
-        throw new Error("Expected type #{@props[varName]} for node #{varNode}")
-    return
-  ###
 
   getSubsymbol: (propSymbols) ->
     if not @type.isArr() and not @type.isObj()
@@ -116,12 +101,13 @@ class Symbol
       argSymbol.unifyType(@argSymbols[i])
     return
 
-  # TODO: make this work for more than single-element arrays
+  # TODO: make this work for more than single-dimensional arrays
   genMemptr: ->
     if not @parentSymbols?
       throw new Error("Cannot genMemptr for symbol with no parentSymbols: #{@name}")
     elemSize = if @type.isI64() then 8 else 4
-    return "(i32.add (get_local #{@parentSymbols[0].name}) " +
+    offsetStart = "(i32.add (get_local #{@parentSymbols[0].name}) (i32.const #{Symbol.ARRAY_OFFSET * 4}))"
+    return "(i32.add #{offsetStart} " +
            "(i32.mul (get_local #{@parentSymbols[1].name}) (i32.const #{elemSize})))"
 
   wastVars: ->

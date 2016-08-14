@@ -24,6 +24,13 @@ typedPrint = (x) ->
       arrType = x
     else if not arrLength?
       arrLength = x
+      # Special case 0 length arrays
+      if arrLength == 0
+        console.log('[]')
+        curPrintType = null
+        tmpArr = null
+        arrType = null
+        arrLength = null
     else
       if arrType == 32
         tmpArr.push(x)

@@ -46,9 +46,8 @@ GRAMMAR = {
     '_EMPTY_{type} _Variable_{var}'
   ]
   _Type_: [
-    '_ID_{primitive} LEFT_ANGLE (_Type_ (COMMA _Type_)*){subtypes[]} RIGHT_ANGLE argList{args[]}'
-    '_ID_{primitive} LEFT_ANGLE (_Type_ (COMMA _Type_)*){subtypes[]} RIGHT_ANGLE EMPTY{args[]}'
-    '_ID_{primitive} EMPTY{subtypes[]} EMPTY{args[]}'
+    '_ID_{primitive} LEFT_ANGLE (_Type_ (COMMA _Type_)*){subtypes[]} RIGHT_ANGLE'
+    '_ID_{primitive} EMPTY{subtypes[]}'
   ]
   _Variable_: [
     '_ID_{id} varProp*{props[]}'
@@ -122,9 +121,6 @@ GRAMMAR = {
     'LEFT_SQUARE argListInner{items[]} RIGHT_SQUARE'
   ]
   _ArrayRange_: [
-    'LEFT_SQUARE expr{start} DOT_DOT expr{end} RIGHT_SQUARE'
-  ]
-  _ArrayElem_: [
     'LEFT_SQUARE expr{start} DOT_DOT expr{end} RIGHT_SQUARE'
   ]
 

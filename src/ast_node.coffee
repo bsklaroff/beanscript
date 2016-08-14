@@ -3,9 +3,11 @@ Symbol = require('./symbol')
 Scope = require('./scope')
 Type = require('./type')
 
+SHOW_COMMENTS = false
+
 class ASTNode
   #TODO: unhardcode this, and give them types
-  @NUM_TEMPS = 0
+  @NUM_TEMPS = 2
 
   #TODO: make this a global variable that can be changed during runtime
   @memptr = 0
@@ -114,7 +116,7 @@ class ProgramNode extends ASTNode
     ###
 
     wast = '(module\n'
-    wast += '  (memory 100)\n'
+    wast += '  (memory 10000)\n'
     wast += '  (import $print_i32 "stdio" "print" (param i32))\n'
     wast += '  (import $print_i64 "stdio" "print" (param i64))\n'
     # Generate main function
@@ -127,19 +129,6 @@ class ProgramNode extends ASTNode
     wast += '  )\n'
     # Generate user-defined functions
     wast += ASTNode.addIndent(@genFunctionDefWast())
-    ###
-    wast += '  (func $exp_i64 (param $base i64) (param $exp i64) (result i64)\n'
-    wast += '    (local $res i64)\n'
-    wast += '    (set_local $res (i64.const 1))\n'
-    wast += '    (loop $done $loop\n'
-    wast += '      (br_if $done (i64.eq (get_local $exp) (i64.const 0)))\n'
-    wast += '      (set_local $res (i64.mul (get_local $res) (get_local $base)))\n'
-    wast += '      (set_local $exp (i64.sub (get_local $exp) (i64.const 1)))\n'
-    wast += '      (br $loop)\n'
-    wast += '    )\n'
-    wast += '    (return (get_local $res))\n'
-    wast += '  )\n'
-    ###
     wast += '  (export "main" 0)\n'
     wast += ')\n'
     return wast
@@ -259,10 +248,12 @@ class FunctionCallNode extends ASTNode
       args.push(arg.symbol)
     fnNameSymbol = @children.fnName.symbol
     # Generate function call comment
-    wast += ";;#{fnNameSymbol.name}("
-    for arg in args
-      wast += "#{arg.name}, "
-    wast = "#{wast[...-2]})\n"
+    wast = ''
+    if SHOW_COMMENTS
+      wast += ";;#{fnNameSymbol.name}("
+      for arg in args
+        wast += "#{arg.name}, "
+      wast = "#{wast[...-2]})\n"
     # If function is builtin, inline it
     if fnNameSymbol.name of builtin.FN_CALL_MAP
       wast += builtin.fns[builtin.FN_CALL_MAP[fnNameSymbol.name]](@symbol, args)
@@ -285,8 +276,13 @@ class ArrayNode extends ASTNode
     elemType = @symbol.type.elemType
     elemLength = if elemType.isI64() then 8 else 4
     memptr = ASTNode.memptr
-    ASTNode.memptr += @symbol.type.length * elemLength
-    return "(set_local #{@symbol.name} (i32.const #{memptr}))\n"
+    ASTNode.memptr += Symbol.ARRAY_LENGTH * elemLength + Symbol.ARRAY_OFFSET * 4
+    wast = "(set_local #{@symbol.name} (i32.const #{memptr}))\n"
+    # First array offset item is allocated length
+    wast += "(i32.store (i32.const #{memptr}) (i32.const #{Symbol.ARRAY_LENGTH}))\n"
+    # Second array offset item is user-facing array length
+    wast += "(i32.store (i32.const #{memptr + 4}) (i32.const 0))\n"
+    return wast
 
 
 class VariableNode extends ASTNode
