@@ -29,25 +29,25 @@ builtin =
       wast = ''
       if x.type.isI32()
         wast += "(call_import $print_i32 (i32.const 32))\n"
-        wast += "(call_import $print_i32 (get_local #{x.name}))\n"
+        wast += "(call_import $print_i32 #{x.ref})\n"
         return wast
       else if x.type.isI64()
         wast += "(call_import $print_i32 (i32.const 64))\n"
-        wast += "(call_import $print_i64 (get_local #{x.name}))\n"
-        wast += "(call_import $print_i64 (i64.shr_u (get_local #{x.name}) (i64.const 32)))\n"
+        wast += "(call_import $print_i64 #{x.ref})\n"
+        wast += "(call_import $print_i64 (i64.shr_u #{x.ref} (i64.const 32)))\n"
         return wast
       else if x.type.isArr()
         wast += "(call_import $print_i32 (i32.const 23))\n"
         if x.type.elemType.isI32()
           wast += "(call_import $print_i32 (i32.const 32))\n"
-          wast += "(set_local $$t0 (i32.load (i32.add (get_local #{x.name}) (i32.const 4))))\n"
+          wast += "(set_local $$t0 (i32.load (i32.add #{x.ref} (i32.const 4))))\n"
           wast += "(set_local $$t1 (i32.const 0))\n"
           wast += "(call_import $print_i32 (get_local $$t0))\n"
           wast += "(loop $done $loop\n"
           wast += "  (if (i32.eq (get_local $$t0) (get_local $$t1))\n"
           wast += '    (then (br $done))\n'
           wast += "    (else\n"
-          offsetStart = "(i32.add (get_local #{x.name}) (i32.const #{Symbol.ARRAY_OFFSET * 4}))"
+          offsetStart = "(i32.add #{x.ref} (i32.const #{Symbol.ARRAY_OFFSET * 4}))"
           offset = "(i32.mul (get_local $$t1) (i32.const 4))"
           wast += "      (call_import $print_i32 (i32.load (i32.add #{offsetStart} #{offset})))\n"
           wast += "      (set_local $$t1 (i32.add (get_local $$t1) (i32.const 1)))\n"
@@ -57,12 +57,12 @@ builtin =
           wast += ')\n'
         else if x.type.elemType.isI64()
           wast += "(call_import $print_i32 (i32.const 64))\n"
-          wast += "(set_local $$t0 (i32.load (i32.add (get_local #{x.name}) (i32.const 4))))\n"
+          wast += "(set_local $$t0 (i32.load (i32.add #{x.ref} (i32.const 4))))\n"
           wast += "(set_local $$t1 (i32.const 0))\n"
           wast += "(loop $done $loop\n"
           wast += "  (if (i32.eq $$t0 $$t1)\n"
           wast += "    (then\n"
-          offsetStart = "(i32.add (get_local #{x.name}) (i32.const #{Symbol.ARRAY_OFFSET * 4}))"
+          offsetStart = "(i32.add #{x.ref} (i32.const #{Symbol.ARRAY_OFFSET * 4}))"
           offset = "(i32.mul (get_local $$t1) (i32.const 8))"
           wast += "      (call_import $print_i64 (i64.load (i32.add #{offsetStart} #{offset})))\n"
           wast += "      (call_import $print_i64 (i64.shr_u (i64.load (i32.add #{offsetStart} #{offset})) (i64.const 32)))\n"
@@ -88,16 +88,16 @@ builtin =
          (target.type.isI64() and source.type.isI64()) or
          (target.type.isArr() and source.type.isArr())
         if target.parentSymbols?
-          wast += "(set_local #{target.name} #{target.genMemptr()})\n"
-          wast += "(#{target.type.primitive}.store (get_local #{target.name}) (get_local #{source.name}))\n"
+          typePrimitive = if target.type.isArr() then 'i32' else target.type.primitive
+          wast += "(#{typePrimitive}.store #{target.genMemptr()} #{source.ref})\n"
           # Set user-facing array length to the max of its current value and this index
           wast += "(set_local $$t0 (i32.add (get_local #{target.parentSymbols[target.parentSymbols.length - 2].name}) (i32.const 4)))\n"
-          elemIdx = "(i32.add (get_local #{target.parentSymbols[target.parentSymbols.length - 1].name}) (i32.const 1))"
+          elemIdx = "(i32.add #{target.parentSymbols[target.parentSymbols.length - 1].ref} (i32.const 1))"
           wast += "(if (i32.gt_s #{elemIdx} (i32.load (get_local $$t0)))\n"
           wast += "  (i32.store (get_local $$t0) #{elemIdx})\n"
           wast += ")\n"
         else
-          wast += "(set_local #{target.name} (get_local #{source.name}))\n"
+          wast += "(set_local #{target.name} #{source.ref})\n"
         return wast
       throw new Error("Fn assign not defined for types #{target.type.primitive}, #{source.type.primitive}")
       return
@@ -105,10 +105,10 @@ builtin =
     add: (res, a, b) ->
       wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} + #{b.name}\n" else ''
       if res.type.isI32() and a.type.isI32() and b.type.isI32()
-        wast +=  "(set_local #{res.name} (i32.add (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i32.add #{a.ref} #{b.ref}))\n"
         return wast
       else if res.type.isI64() and a.type.isI64() and b.type.isI64()
-        wast +=  "(set_local #{res.name} (i64.add (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i64.add #{a.ref} #{b.ref}))\n"
         return wast
       throw new Error("Fn add not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
       return
@@ -116,10 +116,10 @@ builtin =
     sub: (res, a, b) ->
       wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} - #{b.name}\n" else ''
       if res.type.isI32() and a.type.isI32() and b.type.isI32()
-        wast +=  "(set_local #{res.name} (i32.sub (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i32.sub #{a.ref} #{b.ref}))\n"
         return wast
       else if res.type.isI64() and a.type.isI64() and b.type.isI64()
-        wast +=  "(set_local #{res.name} (i64.sub (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i64.sub #{a.ref} #{b.ref}))\n"
         return wast
       throw new Error("Fn sub not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
       return
@@ -127,10 +127,10 @@ builtin =
     mul: (res, a, b) ->
       wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} * #{b.name}\n" else ''
       if res.type.isI32() and a.type.isI32() and b.type.isI32()
-        wast +=  "(set_local #{res.name} (i32.mul (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i32.mul #{a.ref} #{b.ref}))\n"
         return wast
       else if res.type.isI64() and a.type.isI64() and b.type.isI64()
-        wast +=  "(set_local #{res.name} (i64.mul (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i64.mul #{a.ref} #{b.ref}))\n"
         return wast
       throw new Error("Fn times not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
       return
@@ -138,10 +138,10 @@ builtin =
     lte: (res, a, b) ->
       wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} <= #{b.name}\n" else ''
       if res.type.isBool() and a.type.isI32() and b.type.isI32()
-        wast +=  "(set_local #{res.name} (i32.le_s (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i32.le_s #{a.ref} #{b.ref}))\n"
         return wast
       else if res.type.isBool() and a.type.isI64() and b.type.isI64()
-        wast +=  "(set_local #{res.name} (i64.le_s (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i64.le_s #{a.ref} #{b.ref}))\n"
         return wast
       throw new Error("Fn lte not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
       return
@@ -149,10 +149,10 @@ builtin =
     lt: (res, a, b) ->
       wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} <= #{b.name}\n" else ''
       if res.type.isBool() and a.type.isI32() and b.type.isI32()
-        wast +=  "(set_local #{res.name} (i32.lt_s (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i32.lt_s #{a.ref} #{b.ref}))\n"
         return wast
       else if res.type.isBool() and a.type.isI64() and b.type.isI64()
-        wast +=  "(set_local #{res.name} (i64.lt_s (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i64.lt_s #{a.ref} #{b.ref}))\n"
         return wast
       throw new Error("Fn lt not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
       return
@@ -160,10 +160,10 @@ builtin =
     gte: (res, a, b) ->
       wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} => #{b.name}\n" else ''
       if res.type.isBool() and a.type.isI32() and b.type.isI32()
-        wast +=  "(set_local #{res.name} (i32.ge_s (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i32.ge_s #{a.ref} #{b.ref}))\n"
         return wast
       else if res.type.isBool() and a.type.isI64() and b.type.isI64()
-        wast +=  "(set_local #{res.name} (i64.ge_s (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i64.ge_s #{a.ref} #{b.ref}))\n"
         return wast
       throw new Error("Fn gte not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
       return
@@ -171,10 +171,10 @@ builtin =
     gt: (res, a, b) ->
       wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} <= #{b.name}\n" else ''
       if res.type.isBool() and a.type.isI32() and b.type.isI32()
-        wast +=  "(set_local #{res.name} (i32.gt_s (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i32.gt_s #{a.ref} #{b.ref}))\n"
         return wast
       else if res.type.isBool() and a.type.isI64() and b.type.isI64()
-        wast +=  "(set_local #{res.name} (i64.gt_s (get_local #{a.name}) (get_local #{b.name})))\n"
+        wast +=  "(set_local #{res.name} (i64.gt_s #{a.ref} #{b.ref}))\n"
         return wast
       throw new Error("Fn gt not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
       return
@@ -182,10 +182,10 @@ builtin =
     neg: (res, a) ->
       wast = if SHOW_COMMENTS then ";;#{res.name} = -#{a.name}" else ''
       if res.type.isI32() and a.type.isI32()
-        wast +=  "(set_local #{res.name} (i32.sub (i32.const 0) (get_local #{a.name})))\n"
+        wast +=  "(set_local #{res.name} (i32.sub (i32.const 0) #{a.ref}))\n"
         return wast
       else if res.type.isI64() and a.type.isI64()
-        wast +=  "(set_local #{res.name} (i64.sub (i64.const 0) (get_local #{a.name})))\n"
+        wast +=  "(set_local #{res.name} (i64.sub (i64.const 0) #{a.ref}))\n"
         return wast
       throw new Error("Fn neg not defined for types #{res.type.primitive}, #{a.type.primitive}")
       return
@@ -194,37 +194,25 @@ builtin =
       wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} ** #{b.name}" else ''
       if res.type.isI32() and a.type.isI32() and b.type.isI32()
         wast += "(set_local #{res.name} (i32.const 1))\n"
-        wast += "(set_local $$t0 (get_local #{b.name}))\n"
+        wast += "(set_local $$t0 #{b.ref})\n"
         wast += '(loop $done $loop\n'
         wast += "  (br_if $done (i32.eq (get_local $$t0) (i32.const 0)))\n"
-        wast += "  (set_local #{res.name} (i32.mul (get_local #{res.name}) (get_local #{a.name})))\n"
+        wast += "  (set_local #{res.name} (i32.mul #{res.ref} #{a.ref}))\n"
         wast += '  (set_local $$t0 (i32.sub (get_local $$t0) (i32.const 1)))\n'
         wast += '  (br $loop)\n'
         wast += ')\n'
         return wast
       else if res.type.isI64() and a.type.isI64() and b.type.isI64()
         wast += "(set_local #{res.name} (i64.const 1))\n"
-        wast += "(set_local $$t0 (get_local #{b.name}))\n"
+        wast += "(set_local $$t0 #{b.ref})\n"
         wast += '(loop $done $loop\n'
         wast += "  (br_if $done (i64.eq (get_local $$t0) (i64.const 0)))\n"
-        wast += "  (set_local #{res.name} (i64.mul (get_local #{res.name}) (get_local #{a.name})))\n"
+        wast += "  (set_local #{res.name} (i64.mul #{res.ref} #{a.ref}))\n"
         wast += '  (set_local $$t0 (i64.sub (get_local $$t0) (i64.const 1)))\n'
         wast += '  (br $loop)\n'
         wast += ')\n'
         return wast
       throw new Error("Fn exp not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
       return
-
-    max: (res, a, b) ->
-      wast = if SHOW_COMMENTS then ";;#{res.name} = max(#{a.name}, #{b.name})\n" else ''
-      if res.type.isI32() and a.type.isI32() and b.type.isI32()
-        wast +=  "(set_local #{res.name} (i32.add (get_local #{a.name}) (get_local #{b.name})))\n"
-        return wast
-      else if res.type.isI64() and a.type.isI64() and b.type.isI64()
-        wast +=  "(set_local #{res.name} (i64.add (get_local #{a.name}) (get_local #{b.name})))\n"
-        return wast
-      throw new Error("Fn add not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
-      return
-
 
 module.exports = builtin

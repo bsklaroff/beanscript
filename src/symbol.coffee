@@ -8,6 +8,8 @@ class Symbol
     @shortName = if @namedVar then @name else @name.split('_')[0]
     @uniqName = "#{@scopeName}:#{@name}"
     @type = null
+    @ref = "(get_local #{@name})"
+    @parentSymbols = null
     @_eqTypeSymbols = {}
     return
 
@@ -101,10 +103,17 @@ class Symbol
       argSymbol.unifyType(@argSymbols[i])
     return
 
-  # TODO: make this work for more than single-dimensional arrays
+  setParentSymbols: (@parentSymbols) ->
+    @ref = "(i32.load #{@genMemptr()})"
+    return
+
+  # TODO: make this work for more than single-dimensional array accesses
   genMemptr: ->
     if not @parentSymbols?
       throw new Error("Cannot genMemptr for symbol with no parentSymbols: #{@name}")
+    # Special case arr.length for now
+    if @parentSymbols[1].name == '$length'
+      return "(i32.add (get_local #{@parentSymbols[0].name}) (i32.const 4))"
     elemSize = if @type.isI64() then 8 else 4
     offsetStart = "(i32.add (get_local #{@parentSymbols[0].name}) (i32.const #{Symbol.ARRAY_OFFSET * 4}))"
     return "(i32.add #{offsetStart} " +

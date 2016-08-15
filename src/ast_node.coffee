@@ -9,9 +9,6 @@ class ASTNode
   #TODO: unhardcode this, and give them types
   @NUM_TEMPS = 2
 
-  #TODO: make this a global variable that can be changed during runtime
-  @memptr = 0
-
   @COMPARISON_OPS = [
     '_EQUALS_EQUALS_'
     '_NOT_EQUALS_'
@@ -41,8 +38,9 @@ class ASTNode
   @genLocals: (scope) ->
     wast = ''
     for name, symbol of scope.locals
-      for [wastVar, type] in symbol.wastVars()
-        wast += "(local #{wastVar} #{type})\n"
+      if symbol.name not in scope.argNames
+        for [wastVar, type] in symbol.wastVars()
+          wast += "(local #{wastVar} #{type})\n"
     for i in [0...ASTNode.NUM_TEMPS]
       wast += "(local $$t#{i} i32)\n"
     return wast
@@ -54,6 +52,15 @@ class ASTNode
       for j in [0...n]
         wastSplit[i] = "  #{wastSplit[i]}"
     return wastSplit.join('\n')
+
+  # 1. $$t0 = *global_mem[0]
+  # 2. name = $$t0
+  # 3. *global_mem[0] += len
+  @malloc: (name, len) ->
+    wast = "(set_local $$t0 (i32.load (i32.const 0)))\n"
+    wast += "(set_local #{name} (get_local $$t0))\n"
+    wast += "(i32.store (i32.const 0) (i32.add (get_local $$t0) (i32.const #{len})))\n"
+    return wast
 
   constructor: (@name, @literal = null) ->
     @children = if @literal? then null else {}
@@ -223,7 +230,10 @@ class OpParenGroupNode extends ASTNode
     @symbol.unifyType(opExprSymbol)
     return
 
-  genWast: -> 'unimplemented'
+  genWast: ->
+    wast = @children.opExpr.genWast()
+    wast += "(set_local #{@symbol.name} (get_local #{@children.opExpr.symbol.name}))\n"
+    return wast
 
 
 class FunctionCallNode extends ASTNode
@@ -248,7 +258,6 @@ class FunctionCallNode extends ASTNode
       args.push(arg.symbol)
     fnNameSymbol = @children.fnName.symbol
     # Generate function call comment
-    wast = ''
     if SHOW_COMMENTS
       wast += ";;#{fnNameSymbol.name}("
       for arg in args
@@ -273,15 +282,12 @@ class ArrayNode extends ASTNode
     return
 
   genWast: ->
-    elemType = @symbol.type.elemType
-    elemLength = if elemType.isI64() then 8 else 4
-    memptr = ASTNode.memptr
-    ASTNode.memptr += Symbol.ARRAY_LENGTH * elemLength + Symbol.ARRAY_OFFSET * 4
-    wast = "(set_local #{@symbol.name} (i32.const #{memptr}))\n"
+    elemLength = if @symbol.type.elemType.isI64() then 8 else 4
+    wast = ASTNode.malloc(@symbol.name, Symbol.ARRAY_OFFSET * 4 + Symbol.ARRAY_LENGTH * elemLength)
     # First array offset item is allocated length
-    wast += "(i32.store (i32.const #{memptr}) (i32.const #{Symbol.ARRAY_LENGTH}))\n"
+    wast += "(i32.store #{@symbol.ref} (i32.const #{Symbol.ARRAY_LENGTH}))\n"
     # Second array offset item is user-facing array length
-    wast += "(i32.store (i32.const #{memptr + 4}) (i32.const 0))\n"
+    wast += "(i32.store (i32.add #{@symbol.ref} (i32.const 4)) (i32.const 0))\n"
     return wast
 
 

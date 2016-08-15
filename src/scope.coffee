@@ -8,12 +8,20 @@ class Scope
     return new Scope(name, parentScope)
 
   constructor: (@name, @parentScope) ->
-    @argNames = null
+    @argNames = []
     @locals = {}
     @_constCount = 0
     return
 
-  getVarSymbol: (varName) -> @locals["$#{varName}"]
+  getVarSymbol: (varName) ->
+    # Hack to find top-level function defs
+    # TODO: fix this
+    rootScope = @
+    while rootScope.parentScope?
+      rootScope = rootScope.parentScope
+    if rootScope.locals["$#{varName}"]?.type?.isFn()
+      return rootScope.locals["$#{varName}"]
+    return @locals["$#{varName}"]
 
   ### No closures for now
     if not name?
@@ -42,12 +50,13 @@ class Scope
     for propSymbol in propSymbols
       nameSuffix += "_#{propSymbol.shortName}"
     symbol = @addAnonSymbol(nodeName, nameSuffix)
-    symbol.parentSymbols = [parentSymbol].concat(propSymbols)
     parentSymbol.addSubsymbol(propSymbols, symbol)
+    symbol.setParentSymbols([parentSymbol].concat(propSymbols))
     return symbol
 
   addArgs: (fnSymbol, args) ->
-    @argNames = []
+    if @argNames.length > 0
+      throw new Error('Cannot add args to scope twice')
     argSymbols = []
     for arg in args
       @argNames.push(arg.symbol.name)
