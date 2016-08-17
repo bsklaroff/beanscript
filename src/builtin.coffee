@@ -135,6 +135,39 @@ builtin =
       throw new Error("Fn times not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
       return
 
+    div: (res, a, b) ->
+      wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} / #{b.name}\n" else ''
+      if res.type.isI32() and a.type.isI32() and b.type.isI32()
+        wast +=  "(set_local #{res.name} (i32.div_s #{a.ref} #{b.ref}))\n"
+        return wast
+      else if res.type.isI64() and a.type.isI64() and b.type.isI64()
+        wast +=  "(set_local #{res.name} (i64.div_s #{a.ref} #{b.ref}))\n"
+        return wast
+      throw new Error("Fn div not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
+      return
+
+    eq: (res, a, b) ->
+      wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} == #{b.name}\n" else ''
+      if res.type.isBool() and a.type.isI32() and b.type.isI32()
+        wast +=  "(set_local #{res.name} (i32.eq #{a.ref} #{b.ref}))\n"
+        return wast
+      else if res.type.isBool() and a.type.isI64() and b.type.isI64()
+        wast +=  "(set_local #{res.name} (i64.eq #{a.ref} #{b.ref}))\n"
+        return wast
+      throw new Error("Fn eq not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
+      return
+
+    neq: (res, a, b) ->
+      wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} != #{b.name}\n" else ''
+      if res.type.isBool() and a.type.isI32() and b.type.isI32()
+        wast +=  "(set_local #{res.name} (i32.ne #{a.ref} #{b.ref}))\n"
+        return wast
+      else if res.type.isBool() and a.type.isI64() and b.type.isI64()
+        wast +=  "(set_local #{res.name} (i64.ne #{a.ref} #{b.ref}))\n"
+        return wast
+      throw new Error("Fn neq not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
+      return
+
     lte: (res, a, b) ->
       wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} <= #{b.name}\n" else ''
       if res.type.isBool() and a.type.isI32() and b.type.isI32()
@@ -214,5 +247,17 @@ builtin =
         return wast
       throw new Error("Fn exp not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
       return
+
+    mod: (res, a, b) ->
+      wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} % #{b.name}\n" else ''
+      if res.type.isI32() and a.type.isI32() and b.type.isI32()
+        wast +=  "(set_local #{res.name} (i32.rem_s #{a.ref} #{b.ref}))\n"
+        return wast
+      else if res.type.isI64() and a.type.isI64() and b.type.isI64()
+        wast +=  "(set_local #{res.name} (i64.rem_s #{a.ref} #{b.ref}))\n"
+        return wast
+      throw new Error("Fn mod not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
+      return
+
 
 module.exports = builtin

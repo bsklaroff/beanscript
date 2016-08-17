@@ -22,15 +22,12 @@ GRAMMAR = {
   _If_: [
     'IF expr{condition} INDENT NEWLINE statements{body[]} UNINDENT maybeElse{else}'
   ]
-  _ElseIf_: [
-    'ELSE IF expr{condition} INDENT NEWLINE statements{body[]} UNINDENT maybeElse{else}'
-  ]
   _Else_: [
     'ELSE INDENT NEWLINE statements{body[]} UNINDENT'
   ]
   maybeElse: [
-    '_ElseIf_'
-    '_Else_'
+    'NEWLINE ELSE _If_'
+    'NEWLINE _Else_'
     '_EMPTY_'
   ]
 

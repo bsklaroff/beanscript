@@ -97,6 +97,10 @@ class ASTNode
     @traverseChildren((child) => child.genSymbols(@scope))
     return
 
+  genFunctionDefSymbols: (@scope) ->
+    @traverseChildren((child) => child.genFunctionDefSymbols(@scope))
+    return
+
   genWast: -> ''
 
   genFunctionDefWast: ->
@@ -106,6 +110,11 @@ class ASTNode
 
 
 class ProgramNode extends ASTNode
+  genSymbols: (@scope) ->
+    @traverseChildren((child) => child.genSymbols(@scope))
+    @traverseChildren((child) => child.genFunctionDefSymbols(@scope))
+    return
+
   genWast: ->
     ###
     #console.log(JSON.stringify(node, null, 2))
@@ -148,12 +157,36 @@ class ReturnNode extends ASTNode
     return wast
 
 
+class IfNode extends ASTNode
+  genWast: ->
+    wast = @children.condition.genWast()
+    wast += "(if #{@children.condition.symbol.ref}\n"
+    wast += '  (then\n'
+    for statement in @children.body
+      wast += ASTNode.addIndent(statement.genWast(), 2)
+    wast += '  )\n'
+    if not @children.else.isEmpty()
+      wast += '  (else\n'
+      wast += ASTNode.addIndent(@children.else.genWast(), 2)
+      wast += '  )\n'
+    wast += ')\n'
+    return wast
+
+
+class ElseNode extends ASTNode
+  genWast: ->
+    wast = ''
+    for statement in @children.body
+      wast += statement.genWast()
+    return wast
+
+
 class WhileNode extends ASTNode
   genWast: ->
     wast = @children.condition.genWast()
     wast += "(loop $done $loop\n"
-    wast += "  (if (get_local #{@children.condition.symbol.name})\n"
-    wast += "    (then\n"
+    wast += "  (if #{@children.condition.symbol.ref}\n"
+    wast += '    (then\n'
     for statement in @children.body
       wast += ASTNode.addIndent(statement.genWast(), 3)
     wast += ASTNode.addIndent(@children.condition.genWast(), 3)
@@ -168,10 +201,16 @@ class WhileNode extends ASTNode
 class AssignmentNode extends ASTNode
   genSymbols: (@scope) ->
     @traverseChildren((child) => child.genSymbols(@scope))
+    # If source is a FunctionDef, it will not yet be defined
+    if @children.source.symbol?
+      @children.target.symbol.unifyType(@children.source.symbol)
+    return
+
+  genFunctionDefSymbols: (@scope) ->
+    @traverseChildren((child) => child.genFunctionDefSymbols(@scope))
     @children.target.symbol.unifyType(@children.source.symbol)
     if @children.source.symbol.type?.isFn()
       @children.target.symbol.fnSymbol = @children.source.symbol
-      return
     return
 
   genWast: ->
@@ -270,7 +309,7 @@ class FunctionCallNode extends ASTNode
     # Otherwise, call user-defined function with arguments
     wast += "(set_local #{@symbol.name} (call #{fnNameSymbol.fnSymbol.name}"
     for arg in args
-      wast += " (get_local #{arg.name})"
+      wast += " #{arg.ref}"
     wast += '))\n'
     return wast
 
@@ -323,12 +362,13 @@ class VariableNode extends ASTNode
 
 
 class FunctionDefNode extends ASTNode
-  genSymbols: (@scope) ->
+  genFunctionDefSymbols: (@scope) ->
     @symbol = @scope.addAnonSymbol(@name, '')
     @symbol.setType(new Type(Type.PRIMITIVES.FN))
     @fnScope = Scope.genFnScope(@symbol.name, @scope)
     @symbol.setChildScopeName(@fnScope.name)
     @traverseChildren((child) => child.genSymbols(@fnScope))
+    @traverseChildren((child) => child.genFunctionDefSymbols(@fnScope))
     @fnScope.addArgs(@symbol, @children.args)
     for statement in @children.body
       if statement.isReturn()
@@ -338,7 +378,8 @@ class FunctionDefNode extends ASTNode
   genFunctionDefWast: ->
     wast = "(func #{@symbol.name}"
     for arg in @children.args
-      wast += " (param #{arg.symbol.name} #{arg.symbol.type.primitive})"
+      argType = if arg.symbol.type.isArr() then 'i32' else arg.symbol.type.primitive
+      wast += " (param #{arg.symbol.name} #{argType})"
     returnType = if @symbol.returnSymbol.type.isArr() then 'i32' else @symbol.returnSymbol.type.primitive
     wast += " (result #{returnType})\n"
     localsWast = ASTNode.genLocals(@fnScope)
@@ -389,6 +430,8 @@ class NumberNode extends ASTNode
 NODE_TYPES =
   _Program_: ProgramNode
   _Return_: ReturnNode
+  _If_: IfNode
+  _Else_: ElseNode
   _While_: WhileNode
   _Assignment_: AssignmentNode
   _MaybeTypedVar_: MaybeTypedVarNode
