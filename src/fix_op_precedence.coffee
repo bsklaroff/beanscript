@@ -23,6 +23,11 @@ fixOpPrecedence = (astNode) ->
     for name, child of astNode.children
       astNode.children[name] = fixOpPrecedence(child)
     return astNode
+  # Check if children are opParenGroups
+  if astNode.children.lhs.isOpParenGroup()
+    astNode.children.lhs = fixOpPrecedence(astNode.children.lhs)
+  if astNode.children.rhs.isOpParenGroup()
+    astNode.children.rhs = fixOpPrecedence(astNode.children.rhs)
   # Fix operator precedence for an op node
   [operators, operands] = getOpLists(astNode.children.rhs)
   operators.unshift(astNode.children.op)
@@ -33,6 +38,11 @@ getOpLists = (astNode) ->
   # Check if astNode was the last rhs in an op chain
   if not astNode.isOpExpression()
     return [[], [astNode]]
+  # Check if children are opParenGroups
+  if astNode.children.lhs.isOpParenGroup()
+    astNode.children.lhs = fixOpPrecedence(astNode.children.lhs)
+  if astNode.children.rhs.isOpParenGroup()
+    astNode.children.rhs = fixOpPrecedence(astNode.children.rhs)
   [operators, operands] = getOpLists(astNode.children.rhs)
   operators.unshift(astNode.children.op)
   operands.unshift(astNode.children.lhs)
@@ -41,7 +51,7 @@ getOpLists = (astNode) ->
 makeOpTree = (operators, operands, precedenceIdx) ->
   if operators.length == 0
     if operands.length != 1
-      throw new Error("Expeced operands of length 1, found #{operands}")
+      throw new Error("Expected operands of length 1, found #{operands}")
     return operands[0]
   if precedenceIdx >= OP_PRECEDENCE_LEVELS.length
     throw new Error('Precedence index exceeds maximum')
