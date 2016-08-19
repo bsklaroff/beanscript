@@ -104,20 +104,22 @@ class Symbol
     return
 
   setParentSymbols: (@parentSymbols) ->
-    @ref = "(i32.load #{@genMemptr()})"
+    if @type.isI64()
+      @ref = "(i64.load #{@genMemptr()})"
+    else if @type.isI32() or @type.isArr()
+      @ref = "(i32.load #{@genMemptr()})"
     return
 
   # TODO: make this work for more than single-dimensional array accesses
   genMemptr: ->
     if not @parentSymbols?
       throw new Error("Cannot genMemptr for symbol with no parentSymbols: #{@name}")
-    # Special case arr.length for now
-    if @parentSymbols[1].name == '$length'
-      return "(i32.add (get_local #{@parentSymbols[0].name}) (i32.const 4))"
     elemSize = if @type.isI64() then 8 else 4
     offsetStart = "(i32.add (get_local #{@parentSymbols[0].name}) (i32.const #{Symbol.ARRAY_OFFSET * 4}))"
-    return "(i32.add #{offsetStart} " +
-           "(i32.mul (get_local #{@parentSymbols[1].name}) (i32.const #{elemSize})))"
+    offsetLen = "(get_local #{@parentSymbols[1].name})"
+    if @parentSymbols[1].type.isI64()
+      offsetLen = "(i32.wrap/i64 #{offsetLen})"
+    return "(i32.add #{offsetStart} (i32.mul #{offsetLen} (i32.const #{elemSize})))"
 
   wastVars: ->
     if @type?.isI32() or @type?.isArr() or @parentSymbols?

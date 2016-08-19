@@ -41,8 +41,6 @@ class ASTNode
       if symbol.name not in scope.argNames
         for [wastVar, type] in symbol.wastVars()
           wast += "(local #{wastVar} #{type})\n"
-    for i in [0...ASTNode.NUM_TEMPS]
-      wast += "(local $$t#{i} i32)\n"
     return wast
 
   @addIndent: (wast, n = 1) ->
@@ -56,10 +54,11 @@ class ASTNode
   # 1. $$t0 = *global_mem[0]
   # 2. name = $$t0
   # 3. *global_mem[0] += len
-  @malloc: (name, len) ->
-    wast = "(set_local $$t0 (i32.load (i32.const 0)))\n"
-    wast += "(set_local #{name} (get_local $$t0))\n"
-    wast += "(i32.store (i32.const 0) (i32.add (get_local $$t0) (i32.const #{len})))\n"
+  @malloc: (scope, name, len) ->
+    t0 = scope.addTemp(new Type(Type.PRIMITIVES.I32))
+    wast = "(set_local #{t0} (i32.load (i32.const 0)))\n"
+    wast += "(set_local #{name} (get_local #{t0}))\n"
+    wast += "(i32.store (i32.const 0) (i32.add (get_local #{t0}) (i32.const #{len})))\n"
     return wast
 
   constructor: (@name, @literal = null) ->
@@ -137,11 +136,15 @@ class ProgramNode extends ASTNode
     wast += '  (import $print_i64 "stdio" "print" (param i64))\n'
     # Generate main function
     wast += '  (func\n'
+    # Save funcWast to add after locals
+    funcWast = ''
+    for statement in @children.statements
+      funcWast += ASTNode.addIndent(statement.genWast(), 2)
+    # Generate locals after function to account for temp vars
     localsWast = ASTNode.genLocals(@scope)
     if localsWast.length > 0
       wast += ASTNode.addIndent(localsWast, 2)
-    for statement in @children.statements
-      wast += ASTNode.addIndent(statement.genWast(), 2)
+    wast += funcWast
     wast += '  )\n'
     # Generate user-defined functions
     wast += ASTNode.addIndent(@genFunctionDefWast())
@@ -216,7 +219,7 @@ class AssignmentNode extends ASTNode
   genWast: ->
     wast = @children.source.genWast()
     wast += @children.target.genWast()
-    wast += builtin.fns.assign(@children.target.symbol, @children.source.symbol)
+    wast += builtin.fns.assign(@scope, @children.target.symbol, @children.source.symbol)
     return wast
 
 
@@ -254,9 +257,9 @@ class OpExpressionNode extends ASTNode
     wast += @children.rhs.genWast()
     fnName = builtin.OP_MAP[@children.op.name]
     if @children.lhs.symbol?
-      wast += builtin.fns[fnName](@symbol, @children.lhs.symbol, @children.rhs.symbol)
+      wast += builtin.fns[fnName](@scope, @symbol, [@children.lhs.symbol, @children.rhs.symbol])
       return wast
-    wast += builtin.fns[fnName](@symbol, @children.rhs.symbol)
+    wast += builtin.fns[fnName](@scope, @symbol, [@children.rhs.symbol])
     return wast
 
 
@@ -304,7 +307,7 @@ class FunctionCallNode extends ASTNode
       wast = "#{wast[...-2]})\n"
     # If function is builtin, inline it
     if fnNameSymbol.name of builtin.FN_CALL_MAP
-      wast += builtin.fns[builtin.FN_CALL_MAP[fnNameSymbol.name]](@symbol, args)
+      wast += builtin.fns[builtin.FN_CALL_MAP[fnNameSymbol.name]](@scope, @symbol, args)
       return wast
     # Otherwise, call user-defined function with arguments
     wast += "(set_local #{@symbol.name} (call #{fnNameSymbol.fnSymbol.name}"
@@ -322,7 +325,7 @@ class ArrayNode extends ASTNode
 
   genWast: ->
     elemLength = if @symbol.type.elemType.isI64() then 8 else 4
-    wast = ASTNode.malloc(@symbol.name, Symbol.ARRAY_OFFSET * 4 + Symbol.ARRAY_LENGTH * elemLength)
+    wast = ASTNode.malloc(@scope, @symbol.name, Symbol.ARRAY_OFFSET * 4 + Symbol.ARRAY_LENGTH * elemLength)
     # First array offset item is allocated length
     wast += "(i32.store #{@symbol.ref} (i32.const #{Symbol.ARRAY_LENGTH}))\n"
     # Second array offset item is user-facing array length
@@ -341,7 +344,6 @@ class VariableNode extends ASTNode
         throw new Error("No parent symbol found with name: #{nodeName}")
       propSymbols = []
       for prop in @children.props
-        prop.symbol.setType(new Type(Type.PRIMITIVES.I32))
         propSymbols.push(prop.symbol)
       @symbol = parentSymbol.getSubsymbol(propSymbols)
       if not @symbol?
@@ -382,11 +384,15 @@ class FunctionDefNode extends ASTNode
       wast += " (param #{arg.symbol.name} #{argType})"
     returnType = if @symbol.returnSymbol.type.isArr() then 'i32' else @symbol.returnSymbol.type.primitive
     wast += " (result #{returnType})\n"
+    # Save funcWast to add after locals
+    funcWast = ''
+    for statement in @children.body
+      funcWast += ASTNode.addIndent(statement.genWast())
+    # Generate locals after function to account for temp vars
     localsWast = ASTNode.genLocals(@fnScope)
     if localsWast.length > 0
       wast += ASTNode.addIndent(localsWast)
-    for statement in @children.body
-      wast += ASTNode.addIndent(statement.genWast())
+    wast += funcWast
     wast += ')\n'
     @traverseChildren((child) => wast += child.genFunctionDefWast(@scope))
     return wast

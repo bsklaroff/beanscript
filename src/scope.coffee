@@ -45,6 +45,11 @@ class Scope
     @_constCount += 1
     return @locals[name]
 
+  addTemp: (type) ->
+    symbol = @addAnonSymbol('temp', '')
+    symbol.setType(type)
+    return symbol.name
+
   addSubsymbol: (nodeName, parentSymbol, propSymbols) ->
     nameSuffix = parentSymbol.shortName
     for propSymbol in propSymbols
