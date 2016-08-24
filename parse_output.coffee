@@ -71,8 +71,17 @@ getI64 = (tmpLow, x) ->
   lowStr = (tmpLow >>> 0).toString(2)
   # Check for negative number
   if highStr.length == 32 && highStr[0] == '1'
-    return '-' + sumHighLowStrs(highStr.slice(1), lowStr)
+    highStr = flipBits(highStr)
+    lowStr = flipBits(lowStr)
+    return '-' + sumStr(sumHighLowStrs(highStr, lowStr), '1')
   return sumHighLowStrs(highStr, lowStr)
+
+flipBits = (str) ->
+  res = ''
+  for i in [0...str.length]
+    nextBit = if str[i] == '1' then '0' else '1'
+    res += nextBit
+  return res
 
 sumHighLowStrs = (highBinaryStr, lowBinaryStr) ->
   lowNum = parseInt(lowBinaryStr, 2)

@@ -272,5 +272,13 @@ builtin =
       throw new Error("Fn mod not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
       return
 
+    and: (scope, res, [a, b]) ->
+      wast = if SHOW_COMMENTS then ";;#{res.name} = #{a.name} and #{b.name}\n" else ''
+      if res.type.isBool() and a.type.isBool() and b.type.isBool()
+        wast +=  "(set_local #{res.name} (i32.and #{a.ref} #{b.ref}))\n"
+        return wast
+      throw new Error("Fn and not defined for types #{res.type.primitive}, #{a.type.primitive}, #{b.type.primitive}")
+      return
+
 
 module.exports = builtin
