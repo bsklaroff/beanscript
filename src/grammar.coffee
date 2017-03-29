@@ -10,10 +10,42 @@ GRAMMAR = {
     '_If_'
     '_While_'
     '_Assignment_'
+    '_TypeDef_'
+    '_TypeclassDef_'
+    '_TypeInst_'
     'expr'
     '_Comment_'
     'EMPTY'
   ]
+
+  _TypeDef_: [
+    '_ID_{name} TWO_COLON _Type_{type}'
+  ]
+
+  _TypeclassDef_: [
+    'TYPECLASS typeReqList{supertypes[]} _Typeclass_{typeclass} INDENT NEWLINE typeDefs{body[]} UNINDENT'
+  ]
+  typeReqList: [
+    'LEFT_PAREN (_Typeclass_ (COMMA _Typeclass_)*) RIGHT_PAREN DOUBLE_RIGHT_ARROW'
+    'EMPTY'
+  ]
+  _Typeclass_: [
+    '_ID_{class} _ID_{type}'
+  ]
+  typeDefs: [
+    '_TypeDef_ (NEWLINE _TypeDef_)*'
+  ]
+
+  _TypeInst_: [
+    'TYPEINST _Typeclass_{inst} INDENT NEWLINE fnDefObj{fnDefs[]} UNINDENT'
+  ]
+  fnDefObj: [
+    'fnDefProp (NEWLINE fnDefProp)*'
+  ]
+  fnDefProp: [
+    '_ID_{fnName} COLON _FunctionDef_{fnDef}'
+  ]
+
 
   _Return_: [
     'RETURN fnDefOrExpr{returnVal}'
@@ -39,10 +71,13 @@ GRAMMAR = {
     '_MaybeTypedVar_{target} EQUALS fnDefOrExpr{source}'
   ]
   _MaybeTypedVar_: [
-    '_Type_{type} _Variable_{var}'
-    '_EMPTY_{type} _Variable_{var}'
+    '_Variable_{var} TWO_COLON _Type_{type}'
+    '_Variable_{var} _EMPTY_{type}'
   ]
   _Type_: [
+    '((_NonFnType_ RIGHT_ARROW)* _NonFnType_){nonFnTypes[]}'
+  ]
+  _NonFnType_: [
     '_ID_{primitive} LEFT_ANGLE (_Type_ (COMMA _Type_)*){subtypes[]} RIGHT_ANGLE'
     '_ID_{primitive} EMPTY{subtypes[]}'
   ]
@@ -118,7 +153,7 @@ GRAMMAR = {
     'LEFT_SQUARE argListInner{items[]} RIGHT_SQUARE'
   ]
   _ArrayRange_: [
-    'LEFT_SQUARE expr{start} DOT_DOT expr{end} RIGHT_SQUARE'
+    'LEFT_SQUARE expr{start} TWO_DOT expr{end} RIGHT_SQUARE'
   ]
 
   _String_: [
@@ -141,23 +176,15 @@ GRAMMAR = {
     'EMPTY{args[]} fnDef0{body[]}'
   ]
   argDefList: [
-    'LEFT_PAREN argDefListInner RIGHT_PAREN'
-  ]
-  argDefListInner: [
-    'argDefListInner0'
-    'EMPTY'
-  ]
-  argDefListInner0: [
-    '_MaybeTypedId_ COMMA argDefListInner0'
-    '_MaybeTypedId_'
+    'LEFT_PAREN _MaybeTypedId_ (COMMA _MaybeTypedId_)* RIGHT_PAREN'
   ]
   _MaybeTypedId_: [
-    '_Type_{type} _ID_{id}'
-    '_EMPTY_{type} _ID_{id}'
+    '_ID_{id} TWO_COLON _Type_{type}'
+    '_ID_{id} _EMPTY_{type}'
   ]
   fnDef0: [
-    'RIGHT_ARROW INDENT NEWLINE statements UNINDENT'
     'RIGHT_ARROW statement'
+    'RIGHT_ARROW INDENT NEWLINE statements UNINDENT'
   ]
 
   _Comment_: [
@@ -170,8 +197,11 @@ GRAMMAR = {
   IF: 'if'
   WHILE: 'while'
   ELSE: 'else'
+  TYPECLASS: 'typeclass'
+  TYPEINST: 'typeinst'
   EQUALS: '='
   DOT: '\\.'
+  COLON: ':'
   _ID_: '[_a-zA-Z][_a-zA-Z0-9]*'
   _NUMBER_: '[0-9]+(\\.[0-9]*)?'
   LEFT_PAREN: '\\('
@@ -180,7 +210,8 @@ GRAMMAR = {
   RIGHT_SQUARE: '\\]'
   LEFT_ANGLE: '<'
   RIGHT_ANGLE: '>'
-  DOT_DOT: '\\.\\.'
+  TWO_COLON: '::'
+  TWO_DOT: '\\.\\.'
   COMMA: ','
   _MOD_: '%'
   _EXPONENT_: '\\*\\*'
@@ -205,6 +236,7 @@ GRAMMAR = {
   _ESCAPED_DOUBLE_QUOTES_: '\\\\"+'
   _STRING_NO_DOUBLE_QUOTE_: '[^"]+'
   RIGHT_ARROW: '->'
+  DOUBLE_RIGHT_ARROW: '=>'
   HASH: '#'
   NON_NEWLINE: '[^\n]*'
   INDENT: ''

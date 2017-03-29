@@ -1,0 +1,15 @@
+typeclass eq a
+  __eq__ :: a -> a -> bool
+  __neq__ :: a -> a -> bool
+
+typeclass (eq a) => num a
+  __add__ :: a -> a -> a
+  __sub__ :: a -> a -> a
+
+typeinst num i32
+  __add__: (a, b) -> __add_i32__(a, b)
+  __sub__: (a, b) -> __sub_i32__(a, b)
+
+typeinst num i64
+  __add__: (a, b) -> __add_i64__(a, b)
+  __sub__: (a, b) -> __sub_i64__(a, b)

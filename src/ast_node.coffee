@@ -107,6 +107,13 @@ class ASTNode
     @traverseChildren((child) => wast += child.genFunctionDefWast(@scope))
     return wast
 
+  toJSON: ->
+    nonNullObj = {}
+    for k, v of @
+      if v?
+        nonNullObj[k] = v
+    return nonNullObj
+
 
 class ProgramNode extends ASTNode
   genSymbols: (@scope) ->

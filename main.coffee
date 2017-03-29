@@ -1,5 +1,6 @@
 ASTNode = require('./src/ast_node')
 fixOpPrecedence = require('./src/fix_op_precedence')
+replaceOpsWithFns = require('./src/replace_ops_with_fns')
 Parser = require('./src/parser')
 Scope = require('./src/scope')
 
@@ -10,7 +11,8 @@ parser = new Parser()
 
 astTree = parser.parse(inputStr)
 astTree = fixOpPrecedence(astTree)
-#console.log(JSON.stringify(astTree, null, 2))
-astTree.genSymbols(new Scope('global', null))
+astTree = replaceOpsWithFns(astTree)
+console.log(JSON.stringify(astTree, null, 2))
+#astTree.genSymbols(new Scope('global', null))
 #console.log(JSON.stringify(ASTNode.getScopes(astTree), null, 2))
-console.log(astTree.genWast())
+#console.log(astTree.genWast())
