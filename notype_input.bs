@@ -1,0 +1,9 @@
+bop = (a) ->
+  stuff = []
+  inner = []
+  inner[a] = 3
+  stuff[a] = inner
+  print(stuff[a])
+  return stuff
+
+bop(4)
