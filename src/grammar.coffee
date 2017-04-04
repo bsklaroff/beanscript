@@ -3,7 +3,7 @@ GRAMMAR = {
     'statements{statements[]}'
   ]
   statements: [
-    '(statement NEWLINE)* statement'
+    'statement (NEWLINE statement)*'
   ]
   statement: [
     '_Return_'
@@ -183,8 +183,8 @@ GRAMMAR = {
     '_ID_{id} _EMPTY_{type}'
   ]
   fnDef0: [
-    'RIGHT_ARROW statement'
     'RIGHT_ARROW INDENT NEWLINE statements UNINDENT'
+    'RIGHT_ARROW statement'
   ]
 
   _Comment_: [

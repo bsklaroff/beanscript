@@ -2,6 +2,7 @@ ASTNode = require('./ast_node')
 grammar = require('./grammar')
 
 class Parser
+  PARSE_DEBUG = false
   SPACES_PER_INDENT = 2
 
   _makeHistoryNode: (token, parent) ->
@@ -12,6 +13,9 @@ class Parser
         patterns: [token.subtokens]
     else
       rule = grammar[token.name]
+      if not rule?
+        console.log("ERROR: no rule found for token #{token.name}")
+        process.exit(1)
     return {
       rule: rule
       patternNum: 0
@@ -39,7 +43,7 @@ class Parser
 
   # For debugging
   _printHistory: ->
-    printHistory = "[ #{node.rule.name}:#{node.parseIdx}"
+    printHistory = "[ #{@history[0].rule.name}:#{@history[0].parseIdx}"
     for node, i in @history
       if i == 0
         continue
@@ -75,7 +79,8 @@ class Parser
     while @history[0].parseIdx != @inputStr.length
       @_parseNextRule()
       if @history.length == 0
-        return null
+        console.log("ERROR: no parse found for input string")
+        process.exit(1)
     return @_astTreeFromHistory()
 
   # Parses next rule in @history
@@ -87,7 +92,7 @@ class Parser
       parseIdx = @_parseWhitespace(parseIdx)
       literalMatch = @inputStr[parseIdx..].match(new RegExp("^#{rule.regex}"))
       if not literalMatch?
-        @_tokenNoMatch(node.parent)
+        @_tokenNoMatch(node.parent, rule.name)
         return
       nextIdx = parseIdx + literalMatch[0].length
       if rule.isASTNode
@@ -100,10 +105,21 @@ class Parser
         # Parse next line's indentation with this line
         postIndentIdx = @_parseWhitespace(nextIdx)
         if postIndentIdx != nextIdx + @indentLevel * SPACES_PER_INDENT
-          @_tokenNoMatch(node.parent)
+          @_tokenNoMatch(node.parent, rule.name)
           return
         nextIdx = postIndentIdx
-      @_tokenMatch(node.parent, nextIdx)
+      valid = @_tokenMatch(node.parent, nextIdx)
+      # If we matched the whole pattern but did not consume the whole input str,
+      # roll back this match
+      if not valid
+        @_tokenNoMatch(node.parent, rule.name)
+      else if PARSE_DEBUG
+        pattern = node.parent.rule.patterns[node.parent.patternNum]
+        patternStr = ''
+        for token in pattern
+          patternStr += token.name + ' '
+        console.log("matched #{rule.name} in #{node.parent.rule.name}:#{patternStr}")
+        console.log(@inputStr[...@history[@history.length - 1].parseIdx])
     else
       nextToken = rule.patterns[node.patternNum][node.tokenNum]
       @history.push(@_makeHistoryNode(nextToken, node))
@@ -118,20 +134,38 @@ class Parser
 
   # Records that a token of the node's current pattern was matched
   _tokenMatch: (node, nextIdx) ->
+    # If we matched the whole pattern, make sure we matched the whole input str
     if not node?
-      return
+      return nextIdx == @inputStr.length
+    oldParseIdx = node.parseIdx
     node.parseIdx = nextIdx
     node.tokenNum++
     pattern = node.rule.patterns[node.patternNum]
     if node.tokenNum == pattern.length
-      @_tokenMatch(node.parent, nextIdx)
+      valid = @_tokenMatch(node.parent, nextIdx)
+      # If we matched the whole pattern but did not consume the whole input str,
+      # roll back this match
+      if not valid
+        node.parseIdx = oldParseIdx
+        node.tokenNum--
+        return false
     else
       nextToken = pattern[node.tokenNum]
+      if not nextToken?
+        console.log("ERROR: no token found at position #{node.tokenNum} in pattern #{JSON.stringify(pattern)}")
+        process.exit(1)
       @history.push(@_makeHistoryNode(nextToken, node))
-    return
+    return true
 
   # Records that the latest token of the node's current pattern failed to match
-  _tokenNoMatch: (node) ->
+  _tokenNoMatch: (node, ruleName) ->
+    if PARSE_DEBUG
+      pattern = node.rule.patterns[node.patternNum]
+      patternStr = ''
+      for token in pattern
+        patternStr += token.name + ' '
+      console.log("failed to match #{ruleName} in #{node.rule.name}:#{patternStr}")
+      console.log(@inputStr[...@history[@history.length - 1].parseIdx])
     @_removeSubnodesFromHistory(node)
     node.patternNum++
     if node.patternNum == node.rule.patterns.length
@@ -139,7 +173,7 @@ class Parser
       if not node.parent?
         @history = []
         return
-      @_tokenNoMatch(node.parent)
+      @_tokenNoMatch(node.parent, node.rule.name)
     node.tokenNum = 0
     node.parseIdx = node.parent.parseIdx
     return
@@ -149,7 +183,11 @@ class Parser
     while @history.length > 0
       if @history[@history.length - 1] == node
         break
-      @history.pop()
+      poppedNode = @history.pop()
+      if poppedNode.rule.name == 'INDENT'
+        @indentLevel--
+      if poppedNode.rule.name == 'UNINDENT'
+        @indentLevel++
     return
 
 module.exports = Parser
