@@ -1,4 +1,4 @@
-ASTNode = require('./ast_node')
+ASTNode = require('../ast_node')
 
 OP_MAP =
   _EXPONENT_: '__exp__'

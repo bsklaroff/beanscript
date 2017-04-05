@@ -1,4 +1,4 @@
-ASTNode = require('./ast_node')
+ASTNode = require('../ast_node')
 
 OP_EXPRESSION_NAME = '_OpExpression_'
 

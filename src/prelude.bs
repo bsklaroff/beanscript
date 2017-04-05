@@ -13,3 +13,4 @@ typeinst num i32
 typeinst num i64
   __add__: (a, b) -> __add_i64__(a, b)
   __sub__: (a, b) -> __sub_i64__(a, b)
+
