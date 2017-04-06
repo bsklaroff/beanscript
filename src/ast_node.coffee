@@ -447,6 +447,10 @@ NODE_TYPES =
   _Else_: ElseNode
   _While_: WhileNode
   _Assignment_: AssignmentNode
+  _TypeDef_: ASTNode
+  _TypeclassDef_: ASTNode
+  _Typeclass_: ASTNode
+  _TypeInst_: ASTNode
   _MaybeTypedVar_: MaybeTypedVarNode
   _Type_: ASTNode
   _Variable_: VariableNode

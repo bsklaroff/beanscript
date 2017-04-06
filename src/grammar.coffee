@@ -71,11 +71,11 @@ GRAMMAR = {
     '_MaybeTypedVar_{target} EQUALS fnDefOrExpr{source}'
   ]
   _MaybeTypedVar_: [
-    '_Variable_{var} TWO_COLON _Type_{type}'
+    '_Variable_{var} TWO_COLON _NonFnType_{type}'
     '_Variable_{var} _EMPTY_{type}'
   ]
   _Type_: [
-    '((_NonFnType_ RIGHT_ARROW)* _NonFnType_){nonFnTypes[]}'
+    'typeReqList{anonConstraints[]} ((_NonFnType_ RIGHT_ARROW)* _NonFnType_){nonFnTypes[]}'
   ]
   _NonFnType_: [
     '_ID_{primitive} LEFT_ANGLE (_Type_ (COMMA _Type_)*){subtypes[]} RIGHT_ANGLE'
@@ -179,7 +179,7 @@ GRAMMAR = {
     'LEFT_PAREN _MaybeTypedId_ (COMMA _MaybeTypedId_)* RIGHT_PAREN'
   ]
   _MaybeTypedId_: [
-    '_ID_{id} TWO_COLON _Type_{type}'
+    '_ID_{id} TWO_COLON _NonFnType_{type}'
     '_ID_{id} _EMPTY_{type}'
   ]
   fnDef0: [
