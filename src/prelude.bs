@@ -3,6 +3,7 @@ typeclass eq a
   __neq__ :: a -> a -> bool
 
 typeclass (eq a) => num a
+  default i32
   __add__ :: a -> a -> a
   __sub__ :: a -> a -> a
 
@@ -14,3 +15,5 @@ typeinst num i64
   __add__: (a, b) -> __add_i64__(a, b)
   __sub__: (a, b) -> __sub_i64__(a, b)
 
+whatever = b + giraffe
+b = a - b

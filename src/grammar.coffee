@@ -23,7 +23,11 @@ GRAMMAR = {
   ]
 
   _TypeclassDef_: [
-    'TYPECLASS typeReqList{supertypes[]} _Typeclass_{typeclass} INDENT NEWLINE typeDefs{body[]} UNINDENT'
+    'TYPECLASS typeReqList{supertypes[]} _Typeclass_{typeclass} INDENT NEWLINE typeDefault{default} typeDefs{body[]} UNINDENT'
+  ]
+  typeDefault: [
+    'DEFAULT _NonFnType_ NEWLINE'
+    '_EMPTY_'
   ]
   typeReqList: [
     'LEFT_PAREN (_Typeclass_ (COMMA _Typeclass_)*) RIGHT_PAREN DOUBLE_RIGHT_ARROW'
@@ -199,6 +203,7 @@ GRAMMAR = {
   ELSE: 'else'
   TYPECLASS: 'typeclass'
   TYPEINST: 'typeinst'
+  DEFAULT: 'default'
   EQUALS: '='
   DOT: '\\.'
   COLON: ':'

@@ -24,6 +24,9 @@ genTypeclasses = (astNode, typeInfo) ->
   typeclass = astNode.children.typeclass
   className = typeclass.children.class.literal
   anonType = typeclass.children.type.literal
+  defaultType = null
+  if not astNode.children.default.isEmpty()
+    defaultType = astNode.children.default.children.primitive.literal
   reqs = parseTypeclassReqs(astNode.children.supertypes, anonType)
   if typeInfo.typeclasses[className]?
     console.log("ERROR: multiple definitions for typeclass #{className}")
@@ -31,6 +34,7 @@ genTypeclasses = (astNode, typeInfo) ->
   typeInfo.typeclasses[className] =
     reqs: reqs
     fns: []
+    default: defaultType
   parseFnTypeDefs(astNode.children.body, className, anonType, typeInfo)
   return
 
