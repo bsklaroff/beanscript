@@ -22,3 +22,4 @@
 - generalized ffi to easily incorporate c libs
 - automatic memoization decorator
 - super long-term: SIMD / GPU / FPGA support
+- self-optimization

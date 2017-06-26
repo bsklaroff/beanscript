@@ -118,6 +118,7 @@ GRAMMAR = {
     '_ArrayRange_'
     '_Variable_'
     '_String_'
+    '_Wast_'
     '_NUMBER_'
   ]
 
@@ -164,6 +165,9 @@ GRAMMAR = {
     'SINGLE_QUOTE singleQuoteString{fragments[]} SINGLE_QUOTE',
     'DOUBLE_QUOTE doubleQuoteString{fragments[]} DOUBLE_QUOTE'
   ]
+  _DoubleQuoteString_: [
+    'DOUBLE_QUOTE doubleQuoteString{fragments[]} DOUBLE_QUOTE'
+  ]
   singleQuoteString: [
     '_ESCAPED_SINGLE_QUOTES_ singleQuoteString'
     '_STRING_NO_SINGLE_QUOTE_ singleQuoteString'
@@ -173,6 +177,27 @@ GRAMMAR = {
     '_ESCAPED_DOUBLE_QUOTES_ doubleQuoteString'
     '_STRING_NO_DOUBLE_QUOTE_ doubleQuoteString'
     'EMPTY'
+  ]
+
+  _Wast_: [
+    'LEFT_PAREN ANY_SPACE sexprs{sexprs[]} ANY_SPACE RIGHT_PAREN'
+  ]
+  sexprs: [
+    '_Sexpr_ ANY_SPACE sexprs'
+    '_Sexpr_'
+  ]
+  _Sexpr_: [
+    'LEFT_PAREN ANY_SPACE sexprSymbols{symbols[]} ANY_SPACE RIGHT_PAREN'
+  ]
+  sexprSymbols: [
+    'sexprSymbol ANY_SPACE sexprSymbols'
+    'EMPTY'
+  ]
+  sexprSymbol: [
+    '_Sexpr_'
+    '_Variable_'
+    '_DoubleQuoteString_'
+    '_NUMBER_'
   ]
 
   _FunctionDef_: [
@@ -197,6 +222,7 @@ GRAMMAR = {
 
   NEWLINE: '[ \t\n]*\n'
   WHITESPACE: '[ \t]*'
+  ANY_SPACE: '[ \t\n]*'
   RETURN: 'return'
   IF: 'if'
   WHILE: 'while'
@@ -243,6 +269,7 @@ GRAMMAR = {
   RIGHT_ARROW: '->'
   DOUBLE_RIGHT_ARROW: '=>'
   HASH: '#'
+  NON_PAREN: '[^()]*'
   NON_NEWLINE: '[^\n]*'
   INDENT: ''
   UNINDENT: ''
