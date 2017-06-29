@@ -46,6 +46,6 @@ typeinst eq bool
   __eq__: (a, b) -> ((i32.eq a b))
   __neq__: (a, b) -> ((i32.ne a b))
 
-whatever = b + giraffe
-a = b
-c = a
+whatever = b
+a = b + 1
+c = (5 * 3)

@@ -18,11 +18,11 @@ _parseSymbols = (astNode, scope) ->
   if astNode.isAssignment()
     source = astNode.children.source
     _parseSymbols(source, scope)
-    sourceSymbol = scope.astIdToSymbol[source.astId]
+    sourceSymbol = scope.getASTNodeSymbol(source)
     target = astNode.children.target
     targetName = target.children.var.children.id.literal
     targetType = target.children.type
-    targetSymbol = scope.getOrAddSymbol(targetName)
+    targetSymbol = scope.getOrAddSymbol(target, targetName)
     if not targetType.isEmpty()
       scope.addTypeConstraint(targetSymbol, targetType.children.primitive.literal)
     scope.unifyTypes(sourceSymbol, targetSymbol)
@@ -30,27 +30,25 @@ _parseSymbols = (astNode, scope) ->
   else if astNode.isOpParenGroup()
     child = astNode.children.opExpr
     _parseSymbols(child, scope)
-    childSymbol = scope.astIdToSymbol[child.astId]
-    opParenSymbol = scope.addAnonSymbol(astNode.name)
-    scope.astIdToSymbol[astNode.astId] = opParenSymbol
+    childSymbol = scope.getASTNodeSymbol(child)
+    opParenSymbol = scope.addAnonSymbol(astNode)
     scope.unifyTypes(childSymbol, opParenSymbol)
 
   else if astNode.isFunctionCall()
     args = astNode.children.args
     _parseSymbols(args, scope)
     fnName = astNode.children.fnName.children.id.literal
-    fnCallSymbol = scope.addAnonSymbol(fnName)
-    scope.astIdToSymbol[astNode.astId] = fnCallSymbol
-    argSymbols = utils.map(args, (arg) -> scope.astIdToSymbol[arg.astId])
+    fnCallSymbol = scope.addAnonSymbol(astNode, fnName)
+    argSymbols = utils.map(args, (arg) -> scope.getASTNodeSymbol(arg))
     scope.addFnCallConstraints(fnName, fnCallSymbol, argSymbols)
 
   else if astNode.isVariable()
     varName = astNode.children.id.literal
-    varSymbol = scope.getOrAddSymbol(varName)
-    scope.astIdToSymbol[astNode.astId] = varSymbol
+    scope.getOrAddSymbol(astNode, varName)
 
   else if astNode.isNumber()
-    console.log('num unimplemented')
+    numSymbol = scope.addAnonSymbol(astNode, astNode.literal)
+    scope.addTypeConstraint(numSymbol, 'num')
 
   else if astNode.isTypeDef()
     console.log('typedef unimplemented')

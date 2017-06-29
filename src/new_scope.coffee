@@ -7,21 +7,25 @@ class Scope
     @_constCount = 0
     return
 
-  getOrAddSymbol: (varName) ->
+  getASTNodeSymbol: (astNode) -> @astIdToSymbol[astNode.astId]
+
+  getOrAddSymbol: (astNode, varName) ->
     if not @locals[varName]?
       @locals[varName] =
         name: varName
         typeConstraints: {}
         type: null
+    @astIdToSymbol[astNode.astId] = @locals[varName]
     return @locals[varName]
 
-  addAnonSymbol: (nodeName, nameSuffix = '') ->
-    name = "#{@_constCount}#{nodeName}#{nameSuffix}"
+  addAnonSymbol: (astNode, nameSuffix = '') ->
+    name = "#{@_constCount}#{astNode.name}#{nameSuffix}"
+    @_constCount++
     @locals[name] =
       name: name
       typeConstraints: {}
       type: null
-    @_constCount++
+    @astIdToSymbol[astNode.astId] = @locals[name]
     return @locals[name]
 
   unifyTypes: (s0, s1) ->
