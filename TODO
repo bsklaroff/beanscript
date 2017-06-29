@@ -1,0 +1,7 @@
+type inference for typedefs
+infer types of non-typeinst (un-overloaded) fn defs
+- constrain non-typeinst fn call arg / return types to their corresponding fn defs
+allow more complex typeclasses
+allow generalized fn defs inside typeclasses
+deal with more complex types (arrays, etc)
+deal with object dot-access

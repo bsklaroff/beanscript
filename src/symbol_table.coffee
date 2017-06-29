@@ -1,36 +1,39 @@
-class Scope
+class SymbolTable
 
   constructor: (@typeInfo) ->
-    @locals = {}
+    @symbols = {}
     @astIdToSymbol = {}
     @typeEqGraph = {}
-    @_constCount = 0
+    @_scopeAnonCount = {}
     return
 
   getASTNodeSymbol: (astNode) -> @astIdToSymbol[astNode.astId]
 
   getOrAddSymbol: (astNode, varName) ->
-    if not @locals[varName]?
-      @locals[varName] =
-        name: varName
+    name = "#{astNode.scopeId}~#{varName}"
+    if not @symbols[name]?
+      @symbols[name] =
+        name: name
         typeConstraints: {}
         type: null
-    @astIdToSymbol[astNode.astId] = @locals[varName]
-    return @locals[varName]
+      @typeEqGraph[name] = {}
+    @astIdToSymbol[astNode.astId] = @symbols[name]
+    return @symbols[name]
 
   addAnonSymbol: (astNode, nameSuffix = '') ->
-    name = "#{@_constCount}#{astNode.name}#{nameSuffix}"
-    @_constCount++
-    @locals[name] =
+    @_scopeAnonCount[astNode.scopeId] ?= 0
+    anonId = @_scopeAnonCount[astNode.scopeId]
+    name = "#{astNode.scopeId}~#{anonId}#{astNode.name}#{nameSuffix}"
+    @_scopeAnonCount[astNode.scopeId]++
+    @symbols[name] =
       name: name
       typeConstraints: {}
       type: null
-    @astIdToSymbol[astNode.astId] = @locals[name]
-    return @locals[name]
+    @typeEqGraph[name] = {}
+    @astIdToSymbol[astNode.astId] = @symbols[name]
+    return @symbols[name]
 
   unifyTypes: (s0, s1) ->
-    @typeEqGraph[s0.name] ?= {}
-    @typeEqGraph[s1.name] ?= {}
     @typeEqGraph[s0.name][s1.name] = true
     @typeEqGraph[s1.name][s0.name] = true
     return
@@ -132,9 +135,9 @@ class Scope
         process.exit(1)
       # Assign concrete types to all symbols in the symbolGroup
       for symbolName in symbolGroup.symbols
-        @locals[symbolName].type = symbolGroup.type
+        @symbols[symbolName].type = symbolGroup.type
     # Make sure every local got assigned a type
-    for symbolName, symbol of @locals
+    for symbolName, symbol of @symbols
       if not symbol.type?
         console.log("ERROR: No concrete type found for symbol #{symbol.name}")
         process.exit(1)
@@ -161,7 +164,7 @@ class Scope
   _addToSymbolGroup: (symbolGroup, symbolName, seenSymbols) ->
     if seenSymbols[symbolName]
       return
-    symbol = @locals[symbolName]
+    symbol = @symbols[symbolName]
     seenSymbols[symbol.name] = true
     symbolGroup.symbols.push(symbol.name)
     # Add all symbol constraints to the anon type's pre-existing constraints
@@ -172,4 +175,4 @@ class Scope
     return
 
 
-module.exports = Scope
+module.exports = SymbolTable

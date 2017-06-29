@@ -407,14 +407,6 @@ class FunctionDefNode extends ASTNode
 
 class FunctionDefArgNode extends ASTNode
   genSymbols: (@scope) ->
-    @symbol = @scope.addNamedSymbol(@children.id.literal)
-    if not @children.type.isEmpty()
-      @symbol.setType(Type.fromTypeNode(@children.type))
-    return
-
-
-class MaybeTypedIdNode extends ASTNode
-  genSymbols: (@scope) ->
     varName = @children.id.literal
     # This only works if we prevent starting a variable name with a number
     @symbol = @scope.getVarSymbol(varName)
@@ -460,7 +452,7 @@ NODE_TYPES =
   _Array_: ArrayNode
   _FunctionDef_: FunctionDefNode
   _FunctionDefArg_: FunctionDefArgNode
-  _MaybeTypedId_: MaybeTypedIdNode
+  _Wast_: ASTNode
   _NUMBER_: NumberNode
   _EMPTY_: ASTNode
 

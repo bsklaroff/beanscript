@@ -44,9 +44,9 @@ GRAMMAR = {
     'TYPEINST _Typeclass_{inst} INDENT NEWLINE fnDefObj{fnDefs[]} UNINDENT'
   ]
   fnDefObj: [
-    'fnDefProp (NEWLINE fnDefProp)*'
+    '_FnDefProp_ (NEWLINE _FnDefProp_)*'
   ]
-  fnDefProp: [
+  _FnDefProp_: [
     '_ID_{fnName} COLON _FunctionDef_{fnDef}'
   ]
 
@@ -205,15 +205,15 @@ GRAMMAR = {
     'EMPTY{args[]} fnDef0{body[]}'
   ]
   argDefList: [
-    'LEFT_PAREN _MaybeTypedId_ (COMMA _MaybeTypedId_)* RIGHT_PAREN'
+    'LEFT_PAREN _FunctionDefArg_ (COMMA _FunctionDefArg_)* RIGHT_PAREN'
   ]
-  _MaybeTypedId_: [
+  _FunctionDefArg_: [
     '_ID_{id} TWO_COLON _NonFnType_{type}'
     '_ID_{id} _EMPTY_{type}'
   ]
   fnDef0: [
-    'RIGHT_ARROW INDENT NEWLINE statements UNINDENT'
-    'RIGHT_ARROW statement'
+    'RIGHT_ARROW INDENT _NEWLINE_ statements UNINDENT'
+    'RIGHT_ARROW _EMPTY_ statement'
   ]
 
   _Comment_: [
@@ -221,6 +221,7 @@ GRAMMAR = {
   ]
 
   NEWLINE: '[ \t\n]*\n'
+  _NEWLINE_: '[ \t\n]*\n'
   WHITESPACE: '[ \t]*'
   ANY_SPACE: '[ \t\n]*'
   RETURN: 'return'
