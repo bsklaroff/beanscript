@@ -1,7 +1,15 @@
-type inference for typedefs
+parse and use typedefs during type inference
 infer types of non-typeinst (un-overloaded) fn defs
 - constrain non-typeinst fn call arg / return types to their corresponding fn defs
+redo wasm toolchain
+concatenate prelude to beginning of running program
+add error handling with pretty error messages
+add command-line args to display each output stage
+add tests
 allow more complex typeclasses
 allow generalized fn defs inside typeclasses
 deal with more complex types (arrays, etc)
 deal with object dot-access
+optimize redundant local vars (SSA)
+inline functions when possible
+package as npm package

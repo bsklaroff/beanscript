@@ -453,6 +453,8 @@ NODE_TYPES =
   _FunctionDef_: FunctionDefNode
   _FunctionDefArg_: FunctionDefArgNode
   _Wast_: ASTNode
+  _Sexpr_: ASTNode
+  _DoubleQuoteString_: ASTNode
   _NUMBER_: NumberNode
   _EMPTY_: ASTNode
 

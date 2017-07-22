@@ -180,11 +180,7 @@ GRAMMAR = {
   ]
 
   _Wast_: [
-    'LEFT_PAREN ANY_SPACE sexprs{sexprs[]} ANY_SPACE RIGHT_PAREN'
-  ]
-  sexprs: [
-    '_Sexpr_ ANY_SPACE sexprs'
-    '_Sexpr_'
+    'LEFT_PAREN ANY_SPACE _Sexpr_{sexpr} ANY_SPACE RIGHT_PAREN'
   ]
   _Sexpr_: [
     'LEFT_PAREN ANY_SPACE sexprSymbols{symbols[]} ANY_SPACE RIGHT_PAREN'
