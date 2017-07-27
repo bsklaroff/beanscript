@@ -26,7 +26,7 @@ typeinst num i32
   __add__: (a, b) -> ((i32.add a b))
   __sub__: (a, b) -> ((i32.sub a b))
   __mul__: (a, b) -> ((i32.mul a b))
-  __div__: (a, b) -> ((i32.div a b))
+  __div__: (a, b) -> ((i32.div_s a b))
   __neg__: (a) -> ((i32.sub (i32.const 0) a))
 
 typeinst num i64
@@ -39,7 +39,7 @@ typeinst num i64
   __add__: (a, b) -> ((i64.add a b))
   __sub__: (a, b) -> ((i64.sub a b))
   __mul__: (a, b) -> ((i64.mul a b))
-  __div__: (a, b) -> ((i64.div a b))
+  __div__: (a, b) -> ((i64.div_s a b))
   __neg__: (a) -> ((i64.sub (i64.const 0) a))
 
 typeinst eq bool
@@ -49,3 +49,4 @@ typeinst eq bool
 whatever = b
 a = b + 1
 c = (5 * 3)
+return c

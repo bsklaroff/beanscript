@@ -4,9 +4,7 @@ genWast = (rootNode, symbolTable) ->
   wast = '''
 (module
   (memory 10000)
-  (import $print_i32 "stdio" "print" (param i32))
-  (import $print_i64 "stdio" "print" (param i64))
-  (func
+  (func (export "main") (result i32)
 
 '''
   statements = rootNode.children.statements
@@ -33,10 +31,10 @@ wastType = (bsType) ->
 
 getScope = (symbol) -> symbol.name.split('~')[0]
 
-getName = (symbol) -> symbol.name.split('~')[1]
+getName = (symbol) -> "$#{symbol.name.split('~')[1]}"
 
 getTypedFnName = (fnName, argSymbols) ->
-  name = "#{fnName}::"
+  name = "$#{fnName}::"
   for argSymbol, i in argSymbols
     if i > 0
       name += '|'
@@ -139,7 +137,7 @@ parseBSWast = (astNode, symbolTable) ->
     symbolName = "#{astNode.scopeId}~#{varName}"
     # If variable exists in outer scope, replace it with a proper wast reference
     if props.length == 0 and symbolTable.symbols[symbolName]?
-      wast += "(get_local #{varName})"
+      wast += "(get_local $#{varName})"
     else
       wast += varName
       for prop in props
