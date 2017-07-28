@@ -1,4 +1,7 @@
-typeclass eq a
+typeclass show a
+  print :: a -> void
+
+typeclass (show a) => eq a
   __eq__ :: a -> a -> bool
   __neq__ :: a -> a -> bool
 
@@ -17,6 +20,9 @@ typeclass (cmp a) => num a
   __neg__ :: a -> a
 
 typeinst num i32
+  print: (a) ->
+    ((i32.store (i32.const 0) a))
+    ((call $print (i32.const 0)))
   __eq__: (a, b) -> ((i32.eq a b))
   __neq__: (a, b) -> ((i32.ne a b))
   __lt__: (a, b) -> ((i32.lt_s a b))
@@ -30,6 +36,9 @@ typeinst num i32
   __neg__: (a) -> ((i32.sub (i32.const 0) a))
 
 typeinst num i64
+  print: (a) ->
+    ((i64.store (i32.const 0) a))
+    ((call $print (i32.const 1)))
   __eq__: (a, b) -> ((i64.eq a b))
   __neq__: (a, b) -> ((i64.ne a b))
   __lt__: (a, b) -> ((i64.lt_s a b))
@@ -43,10 +52,17 @@ typeinst num i64
   __neg__: (a) -> ((i64.sub (i64.const 0) a))
 
 typeinst eq bool
+  print: (a) ->
+    ((i32.store (i32.const 0) a))
+    ((call $print (i32.const 2)))
   __eq__: (a, b) -> ((i32.eq a b))
   __neq__: (a, b) -> ((i32.ne a b))
 
+b = -10000
 whatever = b
-a = b + 1
-c = (5 * 3)
-return c
+a = (whatever + 1) * 2
+print(a)
+c = a * -3
+print(c)
+print(a != -19998)
+print(c == 59994)

@@ -1,9 +1,8 @@
 (module
-  (memory 100)
-  (import "print_i32" "stdio" "print" (param i32))
-  (import "print_i64" "stdio" "print" (param i64))
-  (func
-    (call_import "print_i32" (i32.wrap/i64 (i64.const 9999999999999999)))
+  (func $print (import "env" "print") (param i32))
+  (memory (import "env" "memory") 0)
+  (func (export "main")
+    (i32.store (i32.const 0) (i32.const 23))
+    (call $print (i32.const 0))
   )
-  (export "main" 0)
 )

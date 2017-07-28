@@ -230,7 +230,7 @@ GRAMMAR = {
   EQUALS: '='
   DOT: '\\.'
   COLON: ':'
-  _ID_: '[_a-zA-Z][_a-zA-Z0-9]*'
+  _ID_: '[_$a-zA-Z][_$a-zA-Z0-9]*'
   _NUMBER_: '[0-9]+(\\.[0-9]*)?'
   LEFT_PAREN: '\\('
   RIGHT_PAREN: '\\)'

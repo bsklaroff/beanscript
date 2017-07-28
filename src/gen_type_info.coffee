@@ -4,6 +4,7 @@ genTypeInfo = (rootNode) ->
       bool: []
       i32: []
       i64: []
+      void: []
     fnTypes: {}
     typeclasses: {}
   # Make sure all dataTypes are listed before this call

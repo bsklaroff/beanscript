@@ -130,9 +130,12 @@ class SymbolTable
         else if @typeInfo.typeclasses[constraint].default?
           @_setType(symbolGroup, @typeInfo.typeclasses[constraint].default)
       if not symbolGroup.type?
-        console.log("ERROR: No concrete type found for symbolGroup:\n" +
-                    "#{JSON.stringify(symbolGroup, null, 2)}")
-        process.exit(1)
+        if symbolGroup.symbols.length == 1
+          symbolGroup.type = 'void'
+        else
+          console.log("ERROR: No concrete type found for symbolGroup:\n" +
+                      "#{JSON.stringify(symbolGroup, null, 2)}")
+          process.exit(1)
       # Assign concrete types to all symbols in the symbolGroup
       for symbolName in symbolGroup.symbols
         @symbols[symbolName].type = symbolGroup.type

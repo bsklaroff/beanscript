@@ -3,8 +3,9 @@ utils = require('./utils')
 genWast = (rootNode, symbolTable) ->
   wast = '''
 (module
-  (memory 10000)
-  (func (export "main") (result i32)
+  (func $print (import "env" "print") (param i32))
+  (memory (import "env" "memory") 0)
+  (func (export "main")
 
 '''
   statements = rootNode.children.statements
@@ -50,7 +51,7 @@ genFuncBody = (statements, symbolTable, argNames, scopeId) ->
 genLocals = (symbolTable, argNames, scopeId) ->
   locals = ''
   for symbolName, symbol of symbolTable.symbols
-    if getScope(symbol) == "#{scopeId}" and getName(symbol) not in argNames
+    if getScope(symbol) == "#{scopeId}" and getName(symbol) not in argNames and symbol.type != 'void'
       locals += "(local #{getName(symbol)} #{wastType(symbol.type)})\n"
   return locals
 
@@ -93,11 +94,17 @@ genWastExprs = (astNode, symbolTable) ->
     typedFnName = getTypedFnName(fnName, argSymbols)
     for arg in args
       wast += genWastExprs(arg, symbolTable)
-    wast += "(set_local #{fnCallName} (call #{typedFnName}"
+    if fnCallSymbol.type == 'void'
+      wast += "(call #{typedFnName}"
+    else
+      wast += "(set_local #{fnCallName} (call #{typedFnName}"
     for argSymbol in argSymbols
       argName = getName(argSymbol)
       wast += " (get_local #{argName})"
-    wast += '))\n'
+    if fnCallSymbol.type == 'void'
+      wast += ')\n'
+    else
+      wast += '))\n'
 
   else if astNode.isNumber()
     symbol = symbolTable.getASTNodeSymbol(astNode)
@@ -109,7 +116,10 @@ genWastExprs = (astNode, symbolTable) ->
     symbol = symbolTable.getASTNodeSymbol(astNode)
     name = getName(symbol)
     bsWast = parseBSWast(astNode.children.sexpr, symbolTable)
-    wast += "(set_local #{name} #{bsWast})\n"
+    if symbol.type == 'void'
+      wast += "#{bsWast}\n"
+    else
+      wast += "(set_local #{name} #{bsWast})\n"
 
   else if astNode.isReturn()
     returnVal = astNode.children.returnVal
@@ -179,7 +189,10 @@ genFuncDefs = (astNode, symbolTable) ->
         argName = getName(argSymbol)
         argType = wastType(argSymbol.type)
         wast += " (param #{argName} #{argType})"
-      wast += " (result #{wastType(returnType)})\n"
+      if returnType == 'void'
+        wast += '\n'
+      else
+        wast += " (result #{wastType(returnType)})\n"
       argNames = utils.map(argSymbols, getName)
       funcBody = genFuncBody(fnDef.children.body, symbolTable, argNames, fnDef.scopeId)
       wast += addIndent(funcBody)

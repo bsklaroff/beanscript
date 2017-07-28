@@ -36,8 +36,7 @@ parseSymbols = (astNode, symbolTable, returnType = null) ->
     child = astNode.children.returnVal
     parseSymbols(child, symbolTable, returnType)
     childSymbol = symbolTable.getASTNodeSymbol(child)
-    #TODO: Remove the temporary ? 'i32' to allow returns from files
-    symbolTable.addTypeConstraint(childSymbol, returnType ? 'i32')
+    symbolTable.addTypeConstraint(childSymbol, returnType)
 
   else if astNode.isFunctionCall()
     args = astNode.children.args
