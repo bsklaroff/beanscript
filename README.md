@@ -1,7 +1,9 @@
 # beanscript
 
 ## How to run
-First, install [CoffeeScript](http://coffeescript.org/)
+First, for wasm support, install [Node v8.x](https://nodejs.org)
+
+Second, install [CoffeeScript](http://coffeescript.org/)
 
 Then, to compile a beanscript file to WebAssembly s-expressions:
 ```
@@ -22,23 +24,18 @@ Then, you can run:
 wast2wasm output.wast -o output.wasm
 ```
 
-To execute the .wasm file, install [Node v8.x](https://nodejs.org)
-
-Then:
+Finally, to execute the wasm file:
 ```
 node ./runwasm.js output.wasm
 ```
-
-`parse_output.coffee` is a script that allows us to print different types, for
-example combining two printed 32-bit integers into a single 64-bit integer.
 
 ## Convenient shortcuts
 
 I have the following in my `~/.bashrc`:
 ```
+# Add wast2wasm to PATH
 export PATH=/path/to/wabt/out/gcc/Release:$PATH
 alias bsc='coffee /path/to/beanscript/main.coffee'
-alias parse_bs_output='coffee /path/to/beanscript/parse_output.coffee'
 alias runwasm='node /path/to/beanscript/run_wasm.js'
 function bs {
   TEMP=$(mktemp)
