@@ -75,7 +75,7 @@ parseFnTypeDefs = (typeDefs, className, anonType, typeInfo) ->
       process.exit(1)
     anonTypes[anonType].push(className)
 
-    for anonConstraint in type.children.anonConstraints
+    for anonConstraint in typeDef.children.anonConstraints
       req = anonConstraint.children.class.literal
       reqAnon = anonConstraint.children.type.literal
       if not anonTypes[reqAnon]?

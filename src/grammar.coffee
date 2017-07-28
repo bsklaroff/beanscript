@@ -19,7 +19,7 @@ GRAMMAR = {
   ]
 
   _TypeDef_: [
-    '_ID_{name} TWO_COLON _Type_{type}'
+    '_ID_{name} TWO_COLON typeReqList{anonConstraints[]} _Type_{type}'
   ]
 
   _TypeclassDef_: [
@@ -79,7 +79,10 @@ GRAMMAR = {
     '_Variable_{var} _EMPTY_{type}'
   ]
   _Type_: [
-    'typeReqList{anonConstraints[]} ((_NonFnType_ RIGHT_ARROW)* _NonFnType_){nonFnTypes[]}'
+    '_NonFnType_{nonFnTypes[]}'
+    '(LEFT_PAREN _NonFnType_ (COMMA _NonFnType_)* RIGHT_PAREN RIGHT_ARROW _NonFnType_){nonFnTypes[]}'
+    '(LEFT_PAREN _Empty_ RIGHT_PAREN RIGHT_ARROW _NonFnType_){nonFnTypes[]}'
+    '(_Empty_ RIGHT_ARROW _NonFnType_){nonFnTypes[]}'
   ]
   _NonFnType_: [
     '_ID_{primitive} LEFT_ANGLE (_Type_ (COMMA _Type_)*){subtypes[]} RIGHT_ANGLE'

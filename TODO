@@ -18,6 +18,7 @@ LONG TERM IDEAS
 indent based
 - js-esque bracket-based version with alternative filename
 underscore_case pragma
+currying syntactic sugar
 promises built in
 - any function can be easily wrapped in a promise
 - cancelable
