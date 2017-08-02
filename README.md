@@ -36,7 +36,7 @@ I have the following in my `~/.bashrc`:
 # Add wast2wasm to PATH
 export PATH=/path/to/wabt/out/gcc/Release:$PATH
 alias bsc='coffee /path/to/beanscript/main.coffee'
-alias runwasm='node /path/to/beanscript/run_wasm.js'
+alias runwasm='node /path/to/beanscript/runwasm.js'
 function bs {
   TEMP=$(mktemp)
   bsc $1 > $TEMP

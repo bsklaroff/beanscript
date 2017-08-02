@@ -1,7 +1,6 @@
 parse and use typedefs during type inference
 infer types of non-typeinst (un-overloaded) fn defs
 - constrain non-typeinst fn call arg / return types to their corresponding fn defs
-concatenate prelude to beginning of running program
 add error handling with pretty error messages
 add command-line args to display each output stage
 add tests
