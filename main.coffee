@@ -9,11 +9,12 @@ genSymbols = require('./src/gen_symbols')
 genWast = require('./src/gen_wast')
 
 fs = require('fs')
+prelude = fs.readFileSync('./src/prelude.bs').toString()
 inputStr = fs.readFileSync(process.argv[2]).toString()
 
 parser = new Parser()
 
-astTree = parser.parse(inputStr)
+astTree = parser.parse(prelude + inputStr)
 astTree = addOnelineFnReturns(astTree)
 astTree = fixOpPrecedence(astTree)
 astTree = replaceOpsWithFns(astTree)

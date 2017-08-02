@@ -57,12 +57,3 @@ typeinst eq bool
     ((call $print (i32.const 2)))
   __eq__: (a, b) -> ((i32.eq a b))
   __neq__: (a, b) -> ((i32.ne a b))
-
-b = -10000
-whatever = b
-a = (whatever + 1) * 2
-print(a)
-c = a * -3
-print(c)
-print(a != -19998)
-print(c >= 59994)
