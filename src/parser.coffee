@@ -14,8 +14,10 @@ class Parser
     else
       rule = grammar[token.name]
       if not rule?
-        console.log("ERROR: no rule found for token #{token.name}")
-        process.exit(1)
+        throw {
+          userError: false
+          msg: "ERROR: no rule found for token #{token.name}"
+        }
     return {
       rule: rule
       patternNum: 0
@@ -75,12 +77,16 @@ class Parser
 
   parse: (@inputStr) ->
     @indentLevel = 0
+    @maxParseIdx = 0
     @history = [@_makeHistoryNode({name: '_Program_'}, null)]
     while @history[0].parseIdx != @inputStr.length
       @_parseNextRule()
       if @history.length == 0
-        console.log("ERROR: no parse found for input string")
-        process.exit(1)
+        throw {
+          userError: true
+          type: 'parser'
+          loc: @maxParseIdx + 1
+        }
     return @_astTreeFromHistory()
 
   # Parses next rule in @history
@@ -134,6 +140,7 @@ class Parser
 
   # Records that a token of the node's current pattern was matched
   _tokenMatch: (node, nextIdx) ->
+    @maxParseIdx = Math.max(@maxParseIdx, nextIdx)
     # If we matched the whole pattern, make sure we matched the whole input str
     if not node?
       return nextIdx == @inputStr.length
@@ -152,8 +159,10 @@ class Parser
     else
       nextToken = pattern[node.tokenNum]
       if not nextToken?
-        console.log("ERROR: no token found at position #{node.tokenNum} in pattern #{JSON.stringify(pattern)}")
-        process.exit(1)
+        throw {
+          userError: false
+          msg: "ERROR: no token found at position #{node.tokenNum} in pattern #{JSON.stringify(pattern)}"
+        }
       @history.push(@_makeHistoryNode(nextToken, node))
     return true
 
