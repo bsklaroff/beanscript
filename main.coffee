@@ -12,7 +12,7 @@ try
   genWast = require('./src/gen_wast')
 
   fs = require('fs')
-  prelude = fs.readFileSync('./src/prelude.bs').toString()
+  prelude = fs.readFileSync("#{__dirname}/src/prelude.bs").toString()
   inputStr = fs.readFileSync(process.argv[2]).toString()
 
   parser = new Parser()
