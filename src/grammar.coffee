@@ -18,30 +18,47 @@ GRAMMAR = {
     'EMPTY'
   ]
 
-  _TypeDef_: [
-    '_ID_{name} TWO_COLON typeReqList{anonConstraints[]} _Type_{type}'
-  ]
-
   _TypeclassDef_: [
-    'TYPECLASS typeReqList{supertypes[]} _Typeclass_{typeclass} INDENT NEWLINE typeDefault{default} typeDefs{body[]} UNINDENT'
+    'TYPECLASS _Typeclass_{typeclass} maybeSuperclasses{superclasses[]} INDENT NEWLINE typeDefault{default} typeDefs{body[]} UNINDENT'
   ]
-  typeDefault: [
-    'DEFAULT _NonFnType_ NEWLINE'
-    '_EMPTY_'
-  ]
-  typeReqList: [
-    'LEFT_PAREN (_Typeclass_ (COMMA _Typeclass_)*) RIGHT_PAREN DOUBLE_RIGHT_ARROW'
+  maybeSuperclasses: [
+    'LTE LEFT_PAREN _ID_ (COMMA _ID_)* RIGHT_PAREN'
     'EMPTY'
   ]
   _Typeclass_: [
-    '_ID_{class} _ID_{type}'
+    '_ID_{class} _ID_{anonType}'
+  ]
+  typeDefault: [
+    'DEFAULT _TypeWithContext_{type} NEWLINE'
+    '_EMPTY_'
   ]
   typeDefs: [
     '_TypeDef_ (NEWLINE _TypeDef_)*'
   ]
+  _TypeDef_: [
+    '_ID_{name} TWO_COLON _TypeWithContext_{type}'
+  ]
+
+  _TypeWithContext_: [
+    'typeContext{context[]} _Type_{type}'
+  ]
+  typeContext: [
+    'LEFT_PAREN (_Typeclass_ (COMMA _Typeclass_)*) RIGHT_PAREN DOUBLE_RIGHT_ARROW'
+    'EMPTY'
+  ]
+  _Type_: [
+    '_NonFnType_{typeArr[]}'
+    '(LEFT_PAREN _Type_ (COMMA _Type_)* RIGHT_PAREN RIGHT_ARROW _Type_){typeArr[]}'
+    '(LEFT_PAREN _Empty_ RIGHT_PAREN RIGHT_ARROW _Type_){typeArr[]}'
+    '(_Empty_ RIGHT_ARROW _Type_){typeArr[]}'
+  ]
+  _NonFnType_: [
+    '_ID_{primitive} LEFT_ANGLE (_Type_ (COMMA _Type_)*){params[]} RIGHT_ANGLE'
+    '_ID_{primitive} EMPTY{params[]}'
+  ]
 
   _TypeInst_: [
-    'TYPEINST _Typeclass_{inst} INDENT NEWLINE fnDefObj{fnDefs[]} UNINDENT'
+    'TYPEINST _ID_{class} _ID_{type} INDENT NEWLINE fnDefObj{fnDefs[]} UNINDENT'
   ]
   fnDefObj: [
     '_FnDefProp_ (NEWLINE _FnDefProp_)*'
@@ -49,7 +66,6 @@ GRAMMAR = {
   _FnDefProp_: [
     '_ID_{fnName} COLON _FunctionDef_{fnDef}'
   ]
-
 
   _Return_: [
     'RETURN fnDefOrExpr{returnVal}'
@@ -72,21 +88,7 @@ GRAMMAR = {
   ]
 
   _Assignment_: [
-    '_MaybeTypedVar_{target} EQUALS fnDefOrExpr{source}'
-  ]
-  _MaybeTypedVar_: [
-    '_Variable_{var} TWO_COLON _NonFnType_{type}'
-    '_Variable_{var} _EMPTY_{type}'
-  ]
-  _Type_: [
-    '_NonFnType_{nonFnTypes[]}'
-    '(LEFT_PAREN _NonFnType_ (COMMA _NonFnType_)* RIGHT_PAREN RIGHT_ARROW _NonFnType_){nonFnTypes[]}'
-    '(LEFT_PAREN _Empty_ RIGHT_PAREN RIGHT_ARROW _NonFnType_){nonFnTypes[]}'
-    '(_Empty_ RIGHT_ARROW _NonFnType_){nonFnTypes[]}'
-  ]
-  _NonFnType_: [
-    '_ID_{primitive} LEFT_ANGLE (_Type_ (COMMA _Type_)*){subtypes[]} RIGHT_ANGLE'
-    '_ID_{primitive} EMPTY{subtypes[]}'
+    '_Variable_{target} EQUALS fnDefOrExpr{source}'
   ]
   _Variable_: [
     '_ID_{id} varProp*{props[]}'
@@ -119,6 +121,7 @@ GRAMMAR = {
     '_FunctionCall_'
     '_Array_'
     '_ArrayRange_'
+    '_BOOLEAN_'
     '_Variable_'
     '_String_'
     '_Wast_'
@@ -143,7 +146,12 @@ GRAMMAR = {
   ]
 
   _FunctionCall_: [
-    '_Variable_{fnName} argList{args[]}'
+    'callable{fn} argList{args[]}'
+  ]
+  callable: [
+    '_Variable_'
+    'LEFT_PAREN _FunctionCall_ RIGHT_PAREN'
+    'LEFT_PAREN _FunctionDef_ RIGHT_PAREN'
   ]
   argList: [
     'LEFT_PAREN argListInner RIGHT_PAREN'
@@ -207,8 +215,8 @@ GRAMMAR = {
     'LEFT_PAREN _FunctionDefArg_ (COMMA _FunctionDefArg_)* RIGHT_PAREN'
   ]
   _FunctionDefArg_: [
-    '_ID_{id} TWO_COLON _NonFnType_{type}'
-    '_ID_{id} _EMPTY_{type}'
+    '_ID_{id} EQUALS fnDefOrExpr{default}'
+    '_ID_{id} _EMPTY_{default}'
   ]
   fnDef0: [
     'RIGHT_ARROW INDENT _NEWLINE_ statements UNINDENT'
@@ -233,8 +241,9 @@ GRAMMAR = {
   EQUALS: '='
   DOT: '\\.'
   COLON: ':'
-  _ID_: '[_$a-zA-Z][_$a-zA-Z0-9]*'
+  _ID_: '[@_$a-zA-Z][_$a-zA-Z0-9]*'
   _NUMBER_: '[0-9]+(\\.[0-9]*)?'
+  _BOOLEAN_: 'true|false'
   LEFT_PAREN: '\\('
   RIGHT_PAREN: '\\)'
   LEFT_SQUARE: '\\['
@@ -256,6 +265,7 @@ GRAMMAR = {
   _NOT_EQUALS_: '!='
   _LT_: '<'
   _LTE_: '<='
+  LTE: '<='
   _GT_: '>'
   _GTE_: '>='
   _NOT_: 'not'

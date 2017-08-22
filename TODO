@@ -1,42 +1,62 @@
-parse and use typedefs during type inference
-infer types of non-typeinst (un-overloaded) fn defs
-- constrain non-typeinst fn call arg / return types to their corresponding fn defs
-add error handling with pretty error messages
-add command-line args to display each output stage
-add tests
-allow more complex typeclasses
-allow generalized fn defs inside typeclasses
-deal with more complex types (arrays, etc)
-deal with object dot-access
+reimplement typeclasses
+- allow generalized fn defs inside typeclasses
+higher-order polymorphism, aka type constructors (e.g. arrays)
+object types, with inference
+- deal with object dot-access
+allow type contexts and constructed types in typeinst headers
 centralize handling of void type
-optimize redundant local vars (SSA)
-inline functions when possible
-package as npm package
+add error handling with pretty error messages
+add tests
+add documentation
+fix _FunctionCall_ in grammar to remove parens around nested calls
+allow closures
+fix type inference issues
+- redefining fns means the final generalized type is not known until the last
+  definition, so if we instantiate a fn before the last definition, the type
+  checker will be too permissive
+- ensure fn args are not generalized. particularly an issue if an arg is
+  reassigned inside a fn
+- deal with recursion. also, mutual recursion via global fns / closures
 
 LONG TERM IDEAS
-indent based
-- js-esque bracket-based version with alternative filename
-underscore_case pragma
-currying syntactic sugar
+inline functions when possible
+interactive prompt
+functional language constructs built in (map, filter, reduce, etc)
+currying
+- a(_, 23, _) means curry with 23 as the second argument
+user-defined object types
+- every possible property specified
+- properties optionally typed
+- properties required by default, ?:: marks them optional
+- type can be recursive
+user-defined non-object types
+- enums, with | syntax
+- type constructors (e.g. maybe<int>), basically enums with arguments
+- typeclasses acting on type constructors (e.g. monads)
+by default, functions do not inherit parent scope
+- also by default, no object / array mutation inside functions ->
+- can be made a closure with =>
+- can allow mutation with ->>
+- or both with =>>
+'memoize' fn in prelude, operates only on functional functions
+- can specify if objects returned should be copies or references
 promises built in
 - any function can be easily wrapped in a promise
 - cancelable
 - async / await or .then syntax?
-functional language constructs built in
-by default, functions do not inherit parent scope
-- can be made a closure with =>, which also takes care of @
-strong typing with type inference
-- kinds
+good namespacing / module system
+- allows specifying exported types / functions
 compatible with js
+- package as npm module
 - can require js or bs as modules
-- use npm
-js2bs and coffee2bs interactive migration helpers
-easy ENUM creation
-custom "data views" over efficient underlying arrays
-macros?
-- alternative lisp output / code syntax?
-allow operator overloading
-generalized ffi to easily incorporate c libs
-automatic memoization decorator
+generalized ffi to easily incorporate c, python libs
 super long-term: SIMD / GPU / FPGA support
-self-optimization
+
+SYNTACTIC SUGAR??
+specify infix notation
+operator overloading
+macros
+- alternative lisp output / code syntax
+alternative OOP syntax where a Class translates to a module containing a type and fns
+js-esque bracket-based version with bjs filename
+underscore_case pragma converts to camelCase behind the scenes

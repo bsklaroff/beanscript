@@ -1,59 +1,27 @@
-typeclass show a
-  print :: (a) -> void
+@print :: (a) -> void
+@__eq__ :: (a, a) -> bool
+@__neq__ :: (a, a) -> bool
+@__lt__ :: (a, a) -> bool
+@__lte__ :: (a, a) -> bool
+@__gt__ :: (a, a) -> bool
+@__gte__ :: (a, a) -> bool
+@__add__ :: (a, a) -> a
+@__sub__ :: (a, a) -> a
+@__mul__ :: (a, a) -> a
+@__div__ :: (a, a) -> a
+@__neg__ :: (a) -> a
 
-typeclass (show a) => eq a
-  __eq__ :: (a, a) -> bool
-  __neq__ :: (a, a) -> bool
-
-typeclass (eq a) => cmp a
-  __lt__ :: (a, a) -> bool
-  __lte__ :: (a, a) -> bool
-  __gt__ :: (a, a) -> bool
-  __gte__ :: (a, a) -> bool
-
-typeclass (cmp a) => num a
-  default i32
-  __add__ :: (a, a) -> a
-  __sub__ :: (a, a) -> a
-  __mul__ :: (a, a) -> a
-  __div__ :: (a, a) -> a
-  __neg__ :: (a) -> a
-
-typeinst num i32
-  print: (a) ->
-    ((i32.store (i32.const 0) a))
-    ((call $print (i32.const 0)))
-  __eq__: (a, b) -> ((i32.eq a b))
-  __neq__: (a, b) -> ((i32.ne a b))
-  __lt__: (a, b) -> ((i32.lt_s a b))
-  __lte__: (a, b) -> ((i32.le_s a b))
-  __gt__: (a, b) -> ((i32.gt_s a b))
-  __gte__: (a, b) -> ((i32.ge_s a b))
-  __add__: (a, b) -> ((i32.add a b))
-  __sub__: (a, b) -> ((i32.sub a b))
-  __mul__: (a, b) -> ((i32.mul a b))
-  __div__: (a, b) -> ((i32.div_s a b))
-  __neg__: (a) -> ((i32.sub (i32.const 0) a))
-
-typeinst num i64
-  print: (a) ->
-    ((i64.store (i32.const 0) a))
-    ((call $print (i32.const 1)))
-  __eq__: (a, b) -> ((i64.eq a b))
-  __neq__: (a, b) -> ((i64.ne a b))
-  __lt__: (a, b) -> ((i64.lt_s a b))
-  __lte__: (a, b) -> ((i64.le_s a b))
-  __gt__: (a, b) -> ((i64.gt_s a b))
-  __gte__: (a, b) -> ((i64.ge_s a b))
-  __add__: (a, b) -> ((i64.add a b))
-  __sub__: (a, b) -> ((i64.sub a b))
-  __mul__: (a, b) -> ((i64.mul a b))
-  __div__: (a, b) -> ((i64.div_s a b))
-  __neg__: (a) -> ((i64.sub (i64.const 0) a))
-
-typeinst eq bool
-  print: (a) ->
-    ((i32.store (i32.const 0) a))
-    ((call $print (i32.const 2)))
-  __eq__: (a, b) -> ((i32.eq a b))
-  __neq__: (a, b) -> ((i32.ne a b))
+@print = (x) ->
+  ((i32.store (i32.const 0) x))
+  ((call $print (i32.const 0)))
+@__eq__ = (x, y) -> ((i32.eq x y))
+@__neq__ = (x, y) -> ((i32.ne x y))
+@__lt__ = (x, y) -> ((i32.lt_s x y))
+@__lte__ = (x, y) -> ((i32.le_s x y))
+@__gt__ = (x, y) -> ((i32.gt_s x y))
+@__gte__ = (x, y) -> ((i32.ge_s x y))
+@__add__ = (x, y) -> ((i32.add x y))
+@__sub__ = (x, y) -> ((i32.sub x y))
+@__mul__ = (x, y) -> ((i32.mul x y))
+@__div__ = (x, y) -> ((i32.div_s x y))
+@__neg__ = (x) -> ((i32.sub (i32.const 0) x))

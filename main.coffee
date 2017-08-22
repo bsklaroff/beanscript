@@ -7,6 +7,7 @@ Usage: coffee main.coffee [OPTIONS] FILE
 Options (cannot be combined):
   -a      Output astTree
   -s      Output symbol table
+  -t      Output inferred types
 '''
 
 _execArgs = (args) ->
@@ -20,8 +21,9 @@ _execArgs = (args) ->
     addOnelineFnReturns = require('./src/tree_transform/add_oneline_fn_returns')
     fixOpPrecedence = require('./src/tree_transform/fix_op_precedence')
     replaceOpsWithFns = require('./src/tree_transform/replace_ops_with_fns')
-    genASTIds = require('./src/tree_transform/gen_ast_ids')
+    assignASTIds = require('./src/tree_transform/assign_ast_ids')
     genSymbols = require('./src/gen_symbols')
+    inferTypes = require('./src/infer_types')
     genWast = require('./src/gen_wast')
 
     prelude = fs.readFileSync("#{__dirname}/src/prelude.bs").toString()
@@ -33,13 +35,17 @@ _execArgs = (args) ->
     astTree = addOnelineFnReturns(astTree)
     astTree = fixOpPrecedence(astTree)
     astTree = replaceOpsWithFns(astTree)
-    astTree = genASTIds(astTree)
+    astTree = assignASTIds(astTree)
     if 'a' in args.flags
       return astTree
 
     symbolTable = genSymbols(astTree)
     if 's' in args.flags
       return symbolTable
+
+    typeEnv = inferTypes(astTree, symbolTable)
+    if 't' in args.flags
+      return typeEnv
 
     wast = genWast(astTree, symbolTable)
     return wast
@@ -74,9 +80,10 @@ module.exports = exports = {
   main: main
 }
 
-# JSON.stringify output unless it is a string already
-output = main(process.argv[2..])
-if typeof output == 'string'
-  console.log(output)
-else
-  console.log(JSON.stringify(output, null, 2))
+if require.main == module
+  # JSON.stringify output unless it is a string already
+  output = main(process.argv[2..])
+  if typeof output == 'string'
+    console.log(output)
+  else
+    console.log(JSON.stringify(output, null, 2))

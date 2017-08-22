@@ -1,99 +1,97 @@
-utils = require('./utils')
+SymbolTable = require('./symbol_table')
+symbolTable = null
 
-genSymbols = (rootNode, symbolTable) ->
-  parseSymbols(rootNode, symbolTable)
-  symbolTable.assignAllTypes()
+genSymbols = (rootNode) ->
+  symbolTable = new SymbolTable()
+  _parseSymbols(rootNode)
   return symbolTable
 
-parseSymbols = (astNode, symbolTable, returnType = null) ->
+_parseSymbols = (astNode) ->
   # If astNode is an array, gen symbols for each element
   if astNode.length?
     for child in astNode
-      parseSymbols(child, symbolTable, returnType)
+      _parseSymbols(child)
     return
 
-  # Otherwise, gen children symbols, and then treat astNode based on its type
   if astNode.isAssignment()
-    source = astNode.children.source
-    parseSymbols(source, symbolTable, returnType)
-    sourceSymbol = symbolTable.getASTNodeSymbol(source)
+    _parseSymbols(astNode.children.source)
     target = astNode.children.target
-    targetName = target.children.var.children.id.literal
-    targetType = target.children.type
-    targetSymbol = symbolTable.getOrAddSymbol(target, targetName)
-    if not targetType.isEmpty()
-      symbolTable.addTypeConstraint(targetSymbol, targetType.children.primitive.literal)
-    symbolTable.unifyTypes(sourceSymbol, targetSymbol)
+    targetName = target.children.id.literal
+    symbolTable.setNamedSymbol(target, targetName)
 
   else if astNode.isOpParenGroup()
-    child = astNode.children.opExpr
-    parseSymbols(child, symbolTable, returnType)
-    childSymbol = symbolTable.getASTNodeSymbol(child)
-    opParenSymbol = symbolTable.addAnonSymbol(astNode)
-    symbolTable.unifyTypes(childSymbol, opParenSymbol)
-
-  else if astNode.isReturn()
-    child = astNode.children.returnVal
-    parseSymbols(child, symbolTable, returnType)
-    childSymbol = symbolTable.getASTNodeSymbol(child)
-    symbolTable.addTypeConstraint(childSymbol, returnType)
-
-  else if astNode.isFunctionCall()
-    args = astNode.children.args
-    parseSymbols(args, symbolTable, returnType)
-    fnName = astNode.children.fnName.children.id.literal
-    fnCallSymbol = symbolTable.addAnonSymbol(astNode, fnName)
-    argSymbols = utils.map(args, (arg) -> symbolTable.getASTNodeSymbol(arg))
-    symbolTable.addFnCallConstraints(fnName, fnCallSymbol, argSymbols)
+    _parseSymbols(astNode.children.opExpr)
+    symbolTable.setAnonSymbol(astNode)
 
   else if astNode.isVariable()
     varName = astNode.children.id.literal
-    symbolTable.getOrAddSymbol(astNode, varName)
+    symbolTable.setNamedSymbol(astNode, varName)
 
   else if astNode.isNumber()
-    numSymbol = symbolTable.addAnonSymbol(astNode, astNode.literal)
-    symbolTable.addTypeConstraint(numSymbol, 'num')
+    symbolTable.setAnonSymbol(astNode, astNode.literal)
 
-  else if astNode.isTypeDef()
-    #console.log('typedef unimplemented')
+  else if astNode.isBoolean()
+    symbolTable.setAnonSymbol(astNode, astNode.literal)
 
   else if astNode.isWast()
-    symbolTable.addAnonSymbol(astNode, astNode.literal)
+    symbolTable.setAnonSymbol(astNode, astNode.literal)
 
-  # TODO: make this work for more complex typeclasses
+  else if astNode.isFunctionDef()
+    _parseSymbols(astNode.children.args)
+    _parseSymbols(astNode.children.body)
+    symbolTable.setAnonSymbol(astNode)
+
+  else if astNode.isFunctionDefArg()
+    argName = astNode.children.id.literal
+    symbolTable.setNamedSymbol(astNode, argName)
+
+  else if astNode.isFunctionCall()
+    _parseSymbols(astNode.children.fn)
+    _parseSymbols(astNode.children.args)
+    symbolTable.setAnonSymbol(astNode)
+
+  else if astNode.isTypeDef()
+    symbolName = astNode.children.name.literal
+    symbolTable.setNamedSymbol(astNode, symbolName)
+
+    ###
+  else if astNode.isTypeclassDef()
+    typeclass = astNode.children.typeclass
+    className = typeclass.children.class.literal
+    anonType = typeclass.children.anonType.literal
+    superclasses = utils.map(astNode.children.superclasses, (a) -> a.literal)
+    defaultType = null
+    if not astNode.children.default.isEmpty()
+      defaultType = Type.fromTypeWithContext(astNode.children.default)
+    fns = []
+    for typeDef in astNode.children.body
+      fnName = typeDef.children.name.literal
+      fnType = Type.fromTypeWithContext(typeDef.children.type)
+      fnDefSymbol = symbolTable.getOrAddSymbol(typeDef, fnName)
+      symbolTable.setTypeclass(fnDefSymbol, className, anonType, fnType)
+      fns.push(fnDefSymbol.name)
+    symbolTable.typeclasses[className] =
+      supers: superclasses
+      fns: fns
+      default: defaultType
+
   else if astNode.isTypeInst()
-    classinst = astNode.children.inst
-    instType = classinst.children.type.literal
-    for fnDefProp in astNode.children.fnDefs
-      fnName = fnDefProp.children.fnName.literal
+    instClass = astNode.children.class.literal
+    instType = astNode.children.type.literal
+    fnDefProps = astNode.children.fnDefs
+    _parseSymbols(fnDefProps, parentFnDefSymbol)
+    for fnDefProp in fnDefProps
       fnDef = fnDefProp.children.fnDef
-      fnTypeInfo = symbolTable.typeInfo.fnTypes[fnName]
-      if not fnTypeInfo?
-        console.log("ERROR: type inst fn #{fnName} has no typeclass info")
-        process.exit(1)
-      # Create concrete fn type from anon fn type and type inst type
-      concreteFnType = []
-      for type in fnTypeInfo.fnType
-        if type of fnTypeInfo.anonTypes
-          concreteFnType.push(instType)
-        else
-          concreteFnType.push(type)
-      # Assign symbols for all function def args
-      fnDefArgs = fnDef.children.args
-      for arg, i in fnDefArgs
-        if not arg.children.type.isEmpty()
-          console.log("ERROR: all typeinst fn args must be untyped")
-          process.exit(1)
-        argName = arg.children.id.literal
-        argSymbol = symbolTable.getOrAddSymbol(arg, argName)
-        symbolTable.addTypeConstraint(argSymbol, concreteFnType[i])
-      # Assign symbols for function def body, passing in return type
-      bodyReturnType = concreteFnType[concreteFnType.length - 1]
-      parseSymbols(fnDef.children.body, symbolTable, bodyReturnType)
+      fnDefSymbol = symbolTable.getASTNodeSymbol(fnDef)
+      target = fnDefProp.children.fnName
+      targetSymbol = symbolTable.getOrAddSymbol(target, target.literal)
+      symbolTable.addTypeInst(targetSymbol, instType, fnDefSymbol.name)
+    ###
 
   else
     for name, child of astNode.children
-      parseSymbols(child, symbolTable, returnType)
+      _parseSymbols(child)
   return
+
 
 module.exports = genSymbols

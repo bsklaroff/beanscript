@@ -30,7 +30,6 @@ NODE_TYPES = [
   '_TypeclassDef_'
   '_Typeclass_'
   '_TypeInst_'
-  '_MaybeTypedVar_'
   '_Type_'
   '_Variable_'
   '_OpExpression_'
@@ -39,10 +38,12 @@ NODE_TYPES = [
   '_Array_'
   '_FunctionDef_'
   '_FunctionDefArg_'
+  '_FnDefProp_'
   '_Wast_'
   '_Sexpr_'
   '_DoubleQuoteString_'
   '_NUMBER_'
+  '_BOOLEAN_'
   '_EMPTY_'
 ]
 
