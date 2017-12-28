@@ -14,22 +14,21 @@ FORMS =
 symbolTable = null
 typeCount = null
 superclasses = null
-fnTypeclasses = null
 typeclassEnv = null
+fnTypeclasses = null
 typeEnv = null
 
 inferTypes = (rootNode, _symbolTable) ->
   symbolTable = _symbolTable
   typeCount = -1
   superclasses = {}
-  fnTypeclasses = {}
   typeclassEnv = {}
+  fnTypeclasses = {}
   typeEnv = {}
   _parseSupertypes(rootNode)
   _parseTypeDefs(rootNode)
   _parseTypes(rootNode)
-  return typeEnv
-
+  return {fnTypeclasses, typeEnv}
 
 ###
 Type object generation functions
@@ -51,7 +50,7 @@ _genVariableType = ->
   typeCount++
   return {
     form: FORMS.VARIABLE
-    var: "t#{typeCount}"
+    var: "$t#{typeCount}"
   }
 
 _genFunctionType = (arr) ->
@@ -80,7 +79,6 @@ _parseSupertypes = (rootNode) ->
       superclasses[type] ?= {}
       superclasses[type][typeclass] = true
   return
-
 
 ###
 Parse explicit type definitions, in typeclasses or otherwise
@@ -159,7 +157,6 @@ _parseSingleType = (nonFnTypeNode, typevarMap) ->
   newType = _genVariableType()
   typevarMap[typeId] = newType
   return newType
-
 
 ###
 Parse and infer all types
@@ -242,7 +239,7 @@ _parseTypes = (astNode) ->
       symbol = symbolTable.getNodeSymbol(argNode)
       typeArr.push(_instantiateScheme(typeEnv[symbol]))
     # Any return node inside the function will have unified with returnSymbol
-    returnSymbol = symbolTable.scopeReturnSymbol(astNode)
+    returnSymbol = symbolTable.scopeReturnSymbol(astNode.scopeId)
     if not typeEnv[returnSymbol]?
       _setSymbolType(returnSymbol, _genConcreteType(PRIMITIVES.VOID))
     typeArr.push(_instantiateScheme(typeEnv[returnSymbol]))
@@ -257,7 +254,7 @@ _parseTypes = (astNode) ->
     if not childType?
       console.error("No type found for node: #{JSON.stringify(astNode.children.returnVal)}")
       process.exit(1)
-    returnSymbol = symbolTable.scopeReturnSymbol(astNode)
+    returnSymbol = symbolTable.scopeReturnSymbol(astNode.scopeId)
     _assignSymbolType(returnSymbol, childType)
     return
 
@@ -306,7 +303,7 @@ _generalizeType = (type, scopeId) ->
 _ftvOfEnv = (scopeId) ->
   ftv = {}
   for symbol, schema of typeEnv
-    if symbolTable.getSymbolScope(symbol) == scopeId
+    if symbolTable.getScope(symbol) == scopeId
       schemaFtv = _ftvOfSchema(schema)
       for k of schemaFtv
         ftv[k] = true
@@ -366,7 +363,7 @@ _setSymbolType = (symbol, type) ->
 
 _assignSymbolType = (symbol, type) ->
   prevScheme = typeEnv[symbol] ? _genScheme([], _genVariableType())
-  scopeId = symbolTable.getSymbolScope(symbol)
+  scopeId = symbolTable.getScope(symbol)
   prevType = _instantiateScheme(prevScheme)
   subst = _unifyTypes(prevType, type)
   _applySubstEnv(subst)

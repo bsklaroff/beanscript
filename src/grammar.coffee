@@ -238,7 +238,7 @@ GRAMMAR = {
   COLON: ':'
   _ID_: '[@_$a-zA-Z][_$a-zA-Z0-9]*'
   _NUMBER_: '[0-9]+(\\.[0-9]*)?'
-  _BOOLEAN_: 'true|false'
+  _BOOLEAN_: '(true|false)'
   LEFT_PAREN: '\\('
   RIGHT_PAREN: '\\)'
   LEFT_SQUARE: '\\['

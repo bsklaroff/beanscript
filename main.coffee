@@ -45,11 +45,11 @@ _execArgs = (args) ->
     if 's' in args.flags
       return symbolTable
 
-    typeEnv = inferTypes(astTree, symbolTable)
+    typeInfo = inferTypes(astTree, symbolTable)
     if 't' in args.flags
-      return typeEnv
+      return typeInfo
 
-    wast = genWast(astTree, symbolTable)
+    wast = genWast(astTree, symbolTable, typeInfo)
     return wast
 
   catch e

@@ -1,7 +1,6 @@
 higher-order polymorphism, aka type constructors (e.g. arrays)
 object types, with inference
 - deal with object dot-access
-centralize handling of void type
 add error handling with pretty error messages
 add tests
 add documentation
@@ -26,6 +25,7 @@ interactive prompt
 functional language constructs built in (map, filter, reduce, etc)
 currying
 - a(_, 23, _) means curry with 23 as the second argument
+compose operator in prelude
 user-defined object types
 - every possible property specified
 - properties optionally typed

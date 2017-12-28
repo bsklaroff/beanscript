@@ -1,31 +1,35 @@
 class SymbolTable
 
   constructor: ->
-    @allSymbols = {}
     @_astIdToSymbol = {}
     @_scopeAnonCount = {}
 
-  setNamedSymbol: (astNode, varName, isFunctionCall = false) ->
-    name = "#{astNode.scopeId}~#{varName}"
-    if isFunctionCall
-      name = "0~#{varName}"
-    @allSymbols[name] = true
+  setNamedSymbol: (astNode, varName) ->
+    name = @getSymbolName(varName, astNode.scopeId)
     @_astIdToSymbol[astNode.astId] = name
     return name
 
   setAnonSymbol: (astNode, nameSuffix = '') ->
     @_scopeAnonCount[astNode.scopeId] ?= 0
     anonId = @_scopeAnonCount[astNode.scopeId]
-    name = "#{astNode.scopeId}~#{anonId}#{astNode.name}#{nameSuffix}"
+    varName = "#{anonId}#{astNode.name}#{nameSuffix}"
+    name = @getSymbolName(varName, astNode.scopeId)
     @_scopeAnonCount[astNode.scopeId]++
-    @allSymbols[name] = true
     @_astIdToSymbol[astNode.astId] = name
     return name
 
-  scopeReturnSymbol: (astNode) -> "#{astNode.scopeId}~return"
+  getSymbolName: (varName, scopeId) -> "$#{scopeId}~#{varName}"
+
+  scopeReturnSymbol: (scopeId) -> "$#{scopeId}~return"
 
   getNodeSymbol: (astNode) -> @_astIdToSymbol[astNode.astId]
 
-  getSymbolScope: (symbol) -> symbol.split('~')[0]
+  getScope: (symbol) -> symbol.split('~')[0][1..]
+
+  isGlobal: (symbol) -> symbol.split('~')[1][0] == '@'
+
+  isFunctionDef: (symbol) -> symbol.split('_')[1] == 'FunctionDef'
+
+  isReturn: (symbol) -> symbol.split('~')[1] == 'return'
 
 module.exports = SymbolTable

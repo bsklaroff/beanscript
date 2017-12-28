@@ -20,6 +20,8 @@ exports.intersect = (a0, a1) ->
       res.push(x)
   return res
 
+exports.isString = (x) -> typeof x == 'string' or x instanceof String
+
 exports.isArray = (x) -> Object.prototype.toString.call(x) == '[object Array]'
 
 exports.isObject = (x) -> Object.prototype.toString.call(x) == '[object Object]' and x == Object(x)

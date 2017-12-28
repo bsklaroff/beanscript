@@ -1,203 +1,438 @@
+fs = require('fs')
 utils = require('./utils')
 
-genWast = (rootNode, symbolTable) ->
-  wast = '''
-(module
-  (func $print (import "env" "print") (param i32))
-  (memory (import "env" "memory") 0)
-  (func (export "main")
+PRIMITIVES =
+  I32: 'i32'
+  I64: 'i64'
+  BOOL: 'bool'
+  VOID: 'void'
 
-'''
+FORMS =
+  CONCRETE: 'concrete'
+  VARIABLE: 'variable'
+  FUNCTION: 'function'
+
+TYPE_INDICES =
+  function: 0
+  void: 1
+  i32: 2
+  i64: 3
+  bool: 4
+
+symbolTable = null
+fnTypeclasses = null
+typeEnv = null
+
+genWast = (rootNode, _symbolTable, typeInfo) ->
+  symbolTable = _symbolTable
+  {fnTypeclasses, typeEnv} = typeInfo
+  # Parse typeinsts to map typeclass fns to fn defs
+  fnDefs = []
+  typeclassFns = _getTypeclassFns(rootNode)
+  typeinstFnDefs = {}
+  for symbol, insts of typeclassFns
+    fnDefs.push({symbol: symbol, insts: insts})
+    for typevar, instSymbol of insts
+      typeinstFnDefs[instSymbol] = true
+  # Traverse tree and pull all fnDef nodes out
   statements = rootNode.children.statements
-  mainFunc = genFuncBody(statements, symbolTable, [], rootNode.scopeId)
-  wast += addIndent(mainFunc, 2)
-  wast += '  )\n'
-  otherFuncs = genFuncDefs(statements, symbolTable)
-  wast += addIndent(otherFuncs)
-  wast += ')\n'
+  fnDefs = fnDefs.concat(_getFnDefs(statements))
+  nonTypeinstFnDefs = []
+  for fnDef in fnDefs
+    if fnDef.symbol not of typeinstFnDefs
+      nonTypeinstFnDefs.push(fnDef)
+  # Find each unique number of arguments among our fn defs
+  fnSigs = {}
+  for fnDef in nonTypeinstFnDefs
+    fnType = typeEnv[fnDef.symbol].type
+    argTypevars = _getArgTypevars(fnType)
+    returnsVoid = _isVoid(fnType.arr[fnType.arr.length - 1])
+    fnSigs[argTypevars.length + fnType.arr.length] ?= {}
+    fnSigs[argTypevars.length + fnType.arr.length][returnsVoid] = true
+  # Generate wast
+  sexprs = []
+  # Generate fnsig type definitions
+  for argCount, returnOpts of fnSigs
+    for returnsVoid of returnOpts
+      returnsVoid = if returnsVoid == 'true' then true else false
+      sigSymbol = _genSigSymbol(argCount, returnsVoid)
+      sigType = _genSigType(argCount, returnsVoid)
+      sexprs.push(['type', sigSymbol, sigType])
+  # Generate function table and fn def globals
+  tableSexpr = ['elem']
+  for fnDef in nonTypeinstFnDefs
+    tableSexpr.push(fnDef.symbol)
+  sexprs.push(['table', 'anyfunc', tableSexpr])
+  for fnDef, i in nonTypeinstFnDefs
+    sexprs.push(['global', fnDef.symbol, 'i32', ['i32.const', i]])
+  for symbol of _getNonTypeclassGlobals(rootNode, typeclassFns)
+    sexprs.push(['global', symbol, ['mut', 'i32'], ['i32.const', '-1']])
+  # Generate function definitions
+  for fnDef, i in fnDefs
+    if 'astNode' of fnDef
+      {args, body} = fnDef.astNode.children
+      fnSexpr = _genFn(fnDef.symbol, args, body, fnDef.astNode.scopeId)
+    else
+      fnSexpr = _genTypeclassFn(fnDef)
+    sexprs.push(fnSexpr)
+  # Generate main function
+  mainName = ['export', '"main"']
+  mainFn = _genFn(mainName, [], statements, rootNode.scopeId)
+  sexprs.push(mainFn)
+  # Generate wast string, get rid of extra parentheses
+  wast = _wastToString(sexprs)[1...-1]
+  runtime = fs.readFileSync("#{__dirname}/runtime.wast").toString()
+  wast = runtime.replace('GENERATED_CODE_HERE', wast)
   return wast
 
-addIndent = (wast, n = 1) ->
-  wastSplit = wast.split('\n')
-  # Don't indent the trailing newline
-  for i in [0...wastSplit.length - 1]
-    for j in [0...n]
-      wastSplit[i] = "  #{wastSplit[i]}"
-  return wastSplit.join('\n')
+_getTypeclassFns = (rootNode) ->
+  typeclassFns = {}
+  for astNode in rootNode.children.statements
+    if not astNode.isTypeinst()
+      continue
+    instType = astNode.children.type.literal
+    for fnDefPropNode in astNode.children.fnDefs
+      symbol = symbolTable.getNodeSymbol(fnDefPropNode)
+      fnDefSymbol = symbolTable.getNodeSymbol(fnDefPropNode.children.fnDef)
+      typeclassFns[symbol] ?= {}
+      typeclassFns[symbol][instType] = fnDefSymbol
+  return typeclassFns
 
-wastType = (bsType) ->
-  if bsType == 'bool'
-    return 'i32'
-  return bsType
+_getFnDefs = (astNode) ->
+  fnDefs = []
+  if astNode.length?
+    for child in astNode
+      fnDefs = fnDefs.concat(_getFnDefs(child))
+  else if astNode.isFunctionDef()
+    symbol = symbolTable.getNodeSymbol(astNode)
+    fnDefs.push({symbol: symbol, astNode: astNode})
+  else
+    for name, child of astNode.children
+      fnDefs = fnDefs.concat(_getFnDefs(child))
+  return fnDefs
 
-getScope = (symbol) -> symbol.name.split('~')[0]
+_getNonTypeclassGlobals = (rootNode, typeclassFns) ->
+  nonTypeclassGlobals = {}
+  for astNode in rootNode.children.statements
+    if not astNode.isAssignment()
+      continue
+    targetSymbol = symbolTable.getNodeSymbol(astNode.children.target)
+    if not symbolTable.isGlobal(targetSymbol)
+      continue
+    if targetSymbol of nonTypeclassGlobals
+      console.error("Cannot redefine global symbol #{targetSymbol}")
+      process.exit(1)
+    if targetSymbol of typeclassFns
+      console.error("Cannot redefine typeclass fn #{targetSymbol}")
+      process.exit(1)
+    nonTypeclassGlobals[targetSymbol] = true
+  return nonTypeclassGlobals
 
-getName = (symbol) -> "$#{symbol.name.split('~')[1]}"
+_getArgTypevars = (type) ->
+  if type.form != FORMS.FUNCTION
+    console.error("Cannot get arg typevars for non-fn type #{JSON.stringify(type)}")
+    process.exit(1)
+  argTypevars = []
+  seenTypevars = {}
+  for subtype, i in type.arr
+    if subtype.form == FORMS.VARIABLE and subtype.var not of seenTypevars
+      argTypevars.push({name: subtype.var, loc: i})
+      seenTypevars[subtype.var] = true
+  return argTypevars
 
-getTypedFnName = (fnName, argSymbols) ->
-  name = "$#{fnName}::"
-  for argSymbol, i in argSymbols
-    if i > 0
-      name += '|'
-    name += argSymbol.type
-  return name
+_genSigSymbol = (argCount, returnsVoid) ->
+  voidStr = if returnsVoid then 'void' else ''
+  return "$fnsig#{argCount - 1}#{voidStr}"
 
-genFuncBody = (statements, symbolTable, argNames, scopeId) ->
-  wast = ''
-  wast += genLocals(symbolTable, argNames, scopeId)
-  wast += genWastExprs(statements, symbolTable)
-  return wast
+_genSigType = (argCount, returnsVoid) ->
+  sexpr = ['func']
+  for i in [0...argCount - 1]
+    sexpr.push(['param', 'i32'])
+  if not returnsVoid
+    sexpr.push(['result', 'i32'])
+  return sexpr
 
-genLocals = (symbolTable, argNames, scopeId) ->
-  locals = ''
-  for symbolName, symbol of symbolTable.symbols
-    if getScope(symbol) == "#{scopeId}" and getName(symbol) not in argNames and symbol.type != 'void'
-      locals += "(local #{getName(symbol)} #{wastType(symbol.type)})\n"
-  return locals
+_genFn = (symbol, args, statements, scopeId) ->
+  argSymbols = utils.map(args, (arg) -> symbolTable.getNodeSymbol(arg))
+  sexpr = ['func', symbol]
+  # Don't generate args for main fn
+  if utils.isString(symbol)
+    sexpr = sexpr.concat(_genTypevarArgs(symbol))
+    sexpr = sexpr.concat(_genArgs(argSymbols))
+    fnType = typeEnv[symbol].type
+    if not _isVoid(fnType.arr[fnType.arr.length - 1])
+      sexpr.push(['result', 'i32'])
+  sexpr = sexpr.concat(_genLocals(symbol, argSymbols, scopeId))
+  sexpr = sexpr.concat(_genSexprs(statements))
+  return sexpr
 
-genWastExprs = (astNode, symbolTable) ->
-  wast = ''
+_genTypeclassFn = (fnDef) ->
+  {symbol, insts} = fnDef
+  type = typeEnv[symbol].type
+  argSymbols = []
+  for argType, i in type.arr[...type.arr.length - 1]
+    argSymbols.push("$arg#{i}")
+  returnsVoid = _isVoid(type.arr[type.arr.length - 1])
+  # Generate sexpr
+  sexpr = ['func', symbol]
+  for argTypevar in _getArgTypevars(type)
+    sexpr.push(['param', argTypevar.name, 'i32'])
+  for argSymbol in argSymbols
+    sexpr.push(['param', argSymbol, 'i32'])
+  if not returnsVoid
+    sexpr.push(['result', 'i32'])
+  # For each possible type of the typeclass typevar, add an if statement and
+  # call the correct typeinst fn def
+  typevar = fnTypeclasses[symbol].typevar
+  for instType, fnDefSymbol of insts
+    fnCallSexpr = ['call', fnDefSymbol]
+    for argTypevar in _getArgTypevars(typeEnv[fnDefSymbol].type)
+      fnCallSexpr.push(['get_local', argTypevar.name])
+    for argSymbol in argSymbols
+      fnCallSexpr.push(['get_local', argSymbol])
+    ifSexpr = ['if', ['i32.eq', ['get_local', typevar], ['i32.const', TYPE_INDICES[instType]]]]
+    if returnsVoid
+      ifSexpr.push(['then', fnCallSexpr])
+    else
+      ifSexpr.push(['then', ['return', fnCallSexpr]])
+    sexpr.push(ifSexpr)
+  if not returnsVoid
+    sexpr.push(['return', ['i32.const', '-1']])
+  return sexpr
+
+_genTypevarArgs = (symbol) ->
+  sexpr = []
+  fnType = typeEnv[symbol].type
+  argTypevars = _getArgTypevars(fnType)
+  for argTypevar in argTypevars
+    sexpr.push(['param', argTypevar.name, 'i32'])
+  return sexpr
+
+_genArgs = (argSymbols) ->
+  sexprs = []
+  for argSymbol in argSymbols
+    sexprs.push(['param', argSymbol, 'i32'])
+  return sexprs
+
+_genLocals = (fnNameSymbol, argSymbols, scopeId) ->
+  sexprs = []
+  # Gen (local ...) var declerations
+  for symbol, scheme of typeEnv
+    if symbolTable.getScope(symbol) == scopeId and not symbolTable.isGlobal(symbol) and
+    not symbolTable.isReturn(symbol) and symbol not in argSymbols and symbol != fnNameSymbol
+      sexprs.push(['local', symbol, 'i32'])
+  return sexprs
+
+_genSexprs = (astNode) ->
+  sexprs = []
 
   if astNode.length?
     for child in astNode
-      wast += genWastExprs(child, symbolTable)
-    return wast
+      sexprs = sexprs.concat(_genSexprs(child))
+    return sexprs
 
   if astNode.isAssignment()
     source = astNode.children.source
-    # Don't parse function def assignments here
-    if source.isFunctionDef()
-      return wast
-    sourceSymbol = symbolTable.getASTNodeSymbol(source)
-    sourceName = getName(sourceSymbol)
+    sourceSymbol = symbolTable.getNodeSymbol(source)
     target = astNode.children.target
-    targetSymbol = symbolTable.getASTNodeSymbol(target)
-    targetName = getName(targetSymbol)
-    wast += genWastExprs(source, symbolTable)
-    wast += "(set_local #{targetName} (get_local #{sourceName}))\n"
+    targetSymbol = symbolTable.getNodeSymbol(target)
+    sexprs = sexprs.concat(_genSexprs(source))
+    sexprs.push(_set(targetSymbol, _get(sourceSymbol)))
 
   else if astNode.isOpParenGroup()
-    opParenSymbol = symbolTable.getASTNodeSymbol(astNode)
-    opParenName = getName(opParenSymbol)
+    opParenSymbol = symbolTable.getNodeSymbol(astNode)
     child = astNode.children.opExpr
-    childSymbol = symbolTable.getASTNodeSymbol(child)
-    childName = getName(childSymbol)
-    wast += genWastExprs(child, symbolTable)
-    wast += "(set_local #{opParenName} (get_local #{childName}))\n"
+    childSymbol = symbolTable.getNodeSymbol(child)
+    sexprs = sexprs.concat(_genSexprs(child))
+    sexprs.push(_set(opParenSymbol, _get(childSymbol)))
 
   else if astNode.isFunctionCall()
-    fnCallSymbol = symbolTable.getASTNodeSymbol(astNode)
-    fnCallName = getName(fnCallSymbol)
-    fnName = astNode.children.fnName.children.id.literal
+    # TODO: account for anonymous / nested fns
+    # Generate code for arguments
     args = astNode.children.args
-    argSymbols = utils.map(args, (arg) -> symbolTable.getASTNodeSymbol(arg))
-    typedFnName = getTypedFnName(fnName, argSymbols)
-    for arg in args
-      wast += genWastExprs(arg, symbolTable)
-    if fnCallSymbol.type == 'void'
-      wast += "(call #{typedFnName}"
-    else
-      wast += "(set_local #{fnCallName} (call #{typedFnName}"
+    sexprs = sexprs.concat(_genSexprs(args))
+    # Call function from function table
+    fnCallSexpr = ['call_indirect']
+    # Get type signature from fn def type
+    fnName = symbolTable.getNodeSymbol(astNode.children.fn)
+    fnType = typeEnv[fnName].type
+    argTypevars = _getArgTypevars(fnType)
+    returnsVoid = _isVoid(fnType.arr[fnType.arr.length - 1])
+    fnCallSexpr.push(_genSigSymbol(argTypevars.length + fnType.arr.length, returnsVoid))
+    # Pass type arguments
+    argSymbols = utils.map(args, (arg) -> symbolTable.getNodeSymbol(arg))
+    for argTypevar in argTypevars
+      argType = typeEnv[argSymbols[argTypevar.loc]].type
+      fnCallSexpr.push(_getTypeIndex(argType))
+    # Pass actual arguments
     for argSymbol in argSymbols
-      argName = getName(argSymbol)
-      wast += " (get_local #{argName})"
-    if fnCallSymbol.type == 'void'
-      wast += ')\n'
-    else
-      wast += '))\n'
+      fnCallSexpr.push(_get(argSymbol))
+    # Generate the function def index
+    fnCallSexpr.push(_get(fnName))
+    # Assign return value to function call symbol
+    # Set return value if function is not void
+    fnCallSymbol = symbolTable.getNodeSymbol(astNode)
+    if not _isVoid(typeEnv[fnCallSymbol].type)
+      fnCallSexpr = _set(fnCallSymbol, fnCallSexpr)
+    sexprs.push(fnCallSexpr)
 
   else if astNode.isNumber()
-    symbol = symbolTable.getASTNodeSymbol(astNode)
-    name = getName(symbol)
-    type = wastType(symbol.type)
-    wast += "(set_local #{name} (#{type}.const #{astNode.literal}))\n"
+    symbol = symbolTable.getNodeSymbol(astNode)
+    #type = typeEnv[symbol].type
+    sexprs.push(['i32.store', ['get_global', '$hp'], ['i32.const', astNode.literal]])
+    sexprs.push(_set(symbol, ['get_global', '$hp']))
+    sexprs.push(['set_global', '$hp', ['i32.add', ['get_global', '$hp'], ['i32.const', '4']]])
+
+  else if astNode.isBoolean()
+    symbol = symbolTable.getNodeSymbol(astNode)
+    literal = if astNode.literal == 'true' then 1 else 0
+    sexprs.push(['i32.store', ['get_global', '$hp'], ['i32.const', literal]])
+    sexprs.push(_set(symbol, ['get_global', '$hp']))
+    sexprs.push(['set_global', '$hp', ['i32.add', ['get_global', '$hp'], ['i32.const', '4']]])
 
   else if astNode.isWast()
-    symbol = symbolTable.getASTNodeSymbol(astNode)
-    name = getName(symbol)
-    bsWast = parseBSWast(astNode.children.sexpr, symbolTable)
-    if symbol.type == 'void'
-      wast += "#{bsWast}\n"
+    symbol = symbolTable.getNodeSymbol(astNode)
+    type = typeEnv[symbol].type
+    wastSexpr = _parseBSWast(astNode.children.sexpr)
+    if type.form != FORMS.CONCRETE
+      sexprs.push(wastSexpr)
     else
-      wast += "(set_local #{name} #{bsWast})\n"
+      sexprs.push([_getStoreFn(type), ['get_global', '$hp'], wastSexpr])
+      sexprs.push(_set(symbol, ['get_global', '$hp']))
+      sexprs.push(['set_global', '$hp', ['i32.add', ['get_global', '$hp'], _getTypeSize(type)]])
 
   else if astNode.isReturn()
     returnVal = astNode.children.returnVal
-    returnValSymbol = symbolTable.getASTNodeSymbol(returnVal)
-    returnValName = getName(returnValSymbol)
-    wast += genWastExprs(returnVal, symbolTable)
-    wast += "(return (get_local #{returnValName}))\n"
+    returnValSymbol = symbolTable.getNodeSymbol(returnVal)
+    sexprs = sexprs.concat(_genSexprs(returnVal))
+    sexprs.push(['return', _get(returnValSymbol)])
 
-  return wast
+  return sexprs
 
-parseBSWast = (astNode, symbolTable) ->
-  wast = ''
+_isVoid = (type) -> type.form == FORMS.CONCRETE and type.name == PRIMITIVES.VOID
+
+_set = (symbol, source) ->
+  if _isVoid(typeEnv[symbol].type)
+    return source
+  if symbolTable.isGlobal(symbol) or symbolTable.isFunctionDef(symbol)
+    return ['set_global', symbol, source]
+  return ['set_local', symbol, source]
+
+_get = (symbol) ->
+  if _isVoid(typeEnv[symbol].type)
+    console.error("Void type found for #{symbol}: #{JSON.stringify(typeEnv[symbol])}")
+    process.exit(1)
+  if symbolTable.isGlobal(symbol) or symbolTable.isFunctionDef(symbol)
+    return ['get_global', symbol]
+  return ['get_local', symbol]
+
+_getTypeIndex = (type) ->
+  if type.form == FORMS.FUNCTION
+    return ['i32.const', TYPE_INDICES[type.form]]
+  else if type.form == FORMS.CONCRETE
+    return ['i32.const', TYPE_INDICES[type.name]]
+  else if type.form == FORMS.VARIABLE
+    return ['get_local', type.var]
+  return
+
+_unbox = (symbol) ->
+  type = typeEnv[symbol].type
+  if type.form != FORMS.CONCRETE
+    console.error("Could not unbox non-concrete type: #{JSON.stringify(type)}")
+    process.exit(1)
+  if type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+    return ['i32.load', _get(symbol)]
+  else if type.name == PRIMITIVES.I64
+    return ['i64.load', _get(symbol)]
+  console.error("Unbox unimplemented for type: #{JSON.stringify(type)}")
+  process.exit(1)
+  return
+
+_getStoreFn = (type) ->
+  if type.form != FORMS.CONCRETE
+    console.error("Could not get store fn for non-concrete type: #{JSON.stringify(type)}")
+    process.exit(1)
+  if type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+    return 'i32.store'
+  else if type.name == PRIMITIVES.I64
+    return 'i64.store'
+  console.error("Store fn unimplemented for type: #{JSON.stringify(type)}")
+  process.exit(1)
+  return
+
+_getTypeSize = (type) ->
+  if type.form != FORMS.CONCRETE
+    console.error("Could not get type size for non-concrete type: #{JSON.stringify(type)}")
+    process.exit(1)
+  if type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+    return ['i32.const', '4']
+  else if type.name == PRIMITIVES.I64
+    return ['i32.const', '8']
+  console.error("Type size unimplemented for type: #{JSON.stringify(type)}")
+  process.exit(1)
+  return
+
+_parseBSWast = (astNode) ->
 
   if astNode.isSexpr()
-    wast += '('
+    sexpr = []
     for child, i in astNode.children.symbols
-      if i > 0
-        wast += ' '
-      wast += parseBSWast(child, symbolTable)
-    wast += ')'
+      sexpr.push(_parseBSWast(child))
+    return sexpr
 
   else if astNode.isVariable()
     varName = astNode.children.id.literal
     props = astNode.children.props
-    symbolName = "#{astNode.scopeId}~#{varName}"
+    symbol = symbolTable.getSymbolName(varName, astNode.scopeId)
     # If variable exists in outer scope, replace it with a proper wast reference
-    if props.length == 0 and symbolTable.symbols[symbolName]?
-      wast += "(get_local $#{varName})"
-    else
-      wast += varName
-      for prop in props
-        wast += ".#{prop.literal}"
+    if props.length == 0 and symbol of typeEnv
+      return _unbox(symbol)
+    # Otherwise, pass the string through
+    str = varName
+    for prop in props
+      str += ".#{prop.literal}"
+    return str
 
   else if astNode.isNumber()
-    wast += astNode.literal
+    return astNode.literal
 
   # TODO: handle double quoted string here
 
-  return wast
+  console.error("Unhandled node during bs wast parsing: #{JSON.stringify(astNode)}")
+  process.exit(1)
+  return
 
-genFuncDefs = (astNode, symbolTable) ->
-  wast = ''
+_shouldAddNewline = (arr, i) ->
+  if utils.isArray(arr[0])
+    return true
+  if arr[0] == 'func'
+    # Add newline at end only if we added a newline for the last element in arr
+    if i == -1
+      i = arr.length - 2
+    if not utils.isArray(arr[i + 1])
+      return false
+    if arr[i + 1][0] in ['import', 'export', 'param', 'result']
+      return false
+    return true
+  return false
 
-  if astNode.length?
-    for child in astNode
-      wast += genFuncDefs(child, symbolTable)
-    return wast
-
-  if astNode.isTypeInst()
-    classinst = astNode.children.inst
-    instType = classinst.children.type.literal
-    for fnDefProp in astNode.children.fnDefs
-      fnName = fnDefProp.children.fnName.literal
-      fnDef = fnDefProp.children.fnDef
-      # Determine concrete return type
-      fnTypeInfo = symbolTable.typeInfo.fnTypes[fnName]
-      returnType = fnTypeInfo.fnType[fnTypeInfo.fnType.length - 1]
-      if returnType of fnTypeInfo.anonTypes
-        returnType = instType
-      # Determine typed fn name from fn name and arg symbols
-      args = fnDef.children.args
-      argSymbols = utils.map(args, (arg) -> symbolTable.getASTNodeSymbol(arg))
-      typedFnName = getTypedFnName(fnName, argSymbols)
-      # Generate wast
-      wast += "(func #{typedFnName}"
-      for argSymbol in argSymbols
-        argName = getName(argSymbol)
-        argType = wastType(argSymbol.type)
-        wast += " (param #{argName} #{argType})"
-      if returnType == 'void'
-        wast += '\n'
+_wastToString = (arr, indent = '  ') ->
+  wast = '('
+  for val, i in arr
+    if utils.isArray(val)
+      wast += _wastToString(val, indent + '  ')
+    else
+      wast += val
+    if i != arr.length - 1
+      if _shouldAddNewline(arr, i)
+        wast += "\n#{indent}"
       else
-        wast += " (result #{wastType(returnType)})\n"
-      argNames = utils.map(argSymbols, getName)
-      funcBody = genFuncBody(fnDef.children.body, symbolTable, argNames, fnDef.scopeId)
-      wast += addIndent(funcBody)
-      wast += ')\n'
-
+        wast += ' '
+  if _shouldAddNewline(arr, -1)
+    endIndent = indent[...-2]
+    wast += "\n#{endIndent}"
+  wast += ')'
   return wast
+
 
 module.exports = genWast
