@@ -2,6 +2,7 @@ utils = require('./utils')
 
 PRIMITIVES =
   I32: 'i32'
+  I64: 'i64'
   BOOL: 'bool'
   VOID: 'void'
 
@@ -12,12 +13,15 @@ FORMS =
 
 symbolTable = null
 typeCount = null
+typeclassEnv = null
 typeEnv = null
 
 inferTypes = (rootNode, _symbolTable) ->
   symbolTable = _symbolTable
   typeCount = -1
+  typeclassEnv = {}
   typeEnv = {}
+  _parseTypeclasses(rootNode)
   _parseTypes(rootNode)
   return typeEnv
 

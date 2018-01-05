@@ -21,6 +21,7 @@ _execArgs = (args) ->
     addOnelineFnReturns = require('./src/tree_transform/add_oneline_fn_returns')
     fixOpPrecedence = require('./src/tree_transform/fix_op_precedence')
     replaceOpsWithFns = require('./src/tree_transform/replace_ops_with_fns')
+    amendTypeclasses = require('./src/tree_transform/amend_typeclasses')
     assignASTIds = require('./src/tree_transform/assign_ast_ids')
     genSymbols = require('./src/gen_symbols')
     inferTypes = require('./src/infer_types')
@@ -35,6 +36,7 @@ _execArgs = (args) ->
     astTree = addOnelineFnReturns(astTree)
     astTree = fixOpPrecedence(astTree)
     astTree = replaceOpsWithFns(astTree)
+    astTree = amendTypeclasses(astTree)
     astTree = assignASTIds(astTree)
     if 'a' in args.flags
       return astTree
