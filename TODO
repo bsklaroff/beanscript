@@ -1,9 +1,6 @@
-reimplement typeclasses
-- allow generalized fn defs inside typeclasses
 higher-order polymorphism, aka type constructors (e.g. arrays)
 object types, with inference
 - deal with object dot-access
-allow type contexts and constructed types in typeinst headers
 centralize handling of void type
 add error handling with pretty error messages
 add tests
@@ -17,6 +14,11 @@ fix type inference issues
 - ensure fn args are not generalized. particularly an issue if an arg is
   reassigned inside a fn
 - deal with recursion. also, mutual recursion via global fns / closures
+fix typeclass issues
+- implement runtime overloading via dictionaries
+- allow constructed types
+- allow contexts for typeinst headers
+- allow generalized fn defs inside typeclasses
 
 LONG TERM IDEAS
 inline functions when possible
@@ -34,7 +36,7 @@ user-defined non-object types
 - type constructors (e.g. maybe<int>), basically enums with arguments
 - typeclasses acting on type constructors (e.g. monads)
 by default, functions do not inherit parent scope
-- also by default, no object / array mutation inside functions ->
+- also by default, no argument object / array mutation inside functions ->
 - can be made a closure with =>
 - can allow mutation with ->>
 - or both with =>>
@@ -58,5 +60,6 @@ operator overloading
 macros
 - alternative lisp output / code syntax
 alternative OOP syntax where a Class translates to a module containing a type and fns
+alternative fn calling syntax: var.fn(arg) where var is passed as first arg of fn
 js-esque bracket-based version with bjs filename
 underscore_case pragma converts to camelCase behind the scenes

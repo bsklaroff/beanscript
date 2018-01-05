@@ -19,7 +19,7 @@ GRAMMAR = {
   ]
 
   _TypeclassDef_: [
-    'TYPECLASS _Typeclass_{typeclass} maybeSuperclasses{superclasses[]} INDENT NEWLINE typeDefault{default} typeDefs{body[]} UNINDENT'
+    'TYPECLASS _Typeclass_{typeclass} maybeSuperclasses{superclasses[]} INDENT NEWLINE typeDefs{body[]} UNINDENT'
   ]
   maybeSuperclasses: [
     'LTE LEFT_PAREN _ID_ (COMMA _ID_)* RIGHT_PAREN'
@@ -27,10 +27,6 @@ GRAMMAR = {
   ]
   _Typeclass_: [
     '_ID_{class} _ID_{anonType}'
-  ]
-  typeDefault: [
-    'DEFAULT _TypeWithContext_{type} NEWLINE'
-    '_EMPTY_'
   ]
   typeDefs: [
     '_TypeDef_ (NEWLINE _TypeDef_)*'
@@ -237,7 +233,6 @@ GRAMMAR = {
   ELSE: 'else'
   TYPECLASS: 'typeclass'
   TYPEINST: 'typeinst'
-  DEFAULT: 'default'
   EQUALS: '='
   DOT: '\\.'
   COLON: ':'

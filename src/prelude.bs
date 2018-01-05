@@ -12,7 +12,6 @@ typeclass cmp a <= (eq)
   __gte__ :: (a, a) -> bool
 
 typeclass num a <= (cmp)
-  default i32
   __add__ :: (a, a) -> a
   __sub__ :: (a, a) -> a
   __mul__ :: (a, a) -> a
