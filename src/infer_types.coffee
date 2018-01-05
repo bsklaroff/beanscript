@@ -12,12 +12,13 @@ FORMS =
 
 symbolTable = null
 typeCount = null
+typeEnv = null
 
 inferTypes = (rootNode, _symbolTable) ->
   symbolTable = _symbolTable
   typeCount = -1
   typeEnv = {}
-  _parseTypes(rootNode, typeEnv)
+  _parseTypes(rootNode)
   return typeEnv
 
 _genScheme = (forall, type) ->
@@ -45,9 +46,9 @@ _genFunctionType = (arr) ->
     arr: arr
   }
 
-_generalizeType = (typeEnv, type, scopeId) ->
+_generalizeType = (type, scopeId) ->
   typeFtv = _ftvOfType(type)
-  envFtv = _ftvOfEnv(typeEnv, scopeId)
+  envFtv = _ftvOfEnv(scopeId)
   forall = []
   for k of typeFtv
     if k not of envFtv
@@ -57,7 +58,7 @@ _generalizeType = (typeEnv, type, scopeId) ->
     type: type
   }
 
-_ftvOfEnv = (typeEnv, scopeId) ->
+_ftvOfEnv = (scopeId) ->
   ftv = {}
   for symbol, schema of typeEnv
     if symbolTable.getSymbolScope(symbol) == scopeId
@@ -92,25 +93,25 @@ _instantiateScheme = (scheme) ->
     subst[typevar] = newTypevar
   return _applySubstType(scheme.type, subst)
 
-_setSymbolType = (typeEnv, symbol, type) ->
+_setSymbolType = (symbol, type) ->
   if typeEnv[symbol]?
     console.error("Cannot set type #{type} for symbol #{symbol} which already has scheme #{typeEnv[symbol]}")
     process.exit(1)
   typeEnv[symbol] = _genScheme([], type)
   return
 
-_assignSymbolType = (typeEnv, symbol, type) ->
+_assignSymbolType = (symbol, type) ->
   prevScheme = typeEnv[symbol] ? _genScheme([], _genVariableType())
   scopeId = symbolTable.getSymbolScope(symbol)
   prevType = _instantiateScheme(prevScheme)
   subst = _unifyTypes(prevType, type)
-  _applySubstEnv(typeEnv, subst)
+  _applySubstEnv(subst)
   newType = _applySubstType(prevType, subst)
-  typeEnv[symbol] = _generalizeType(typeEnv, newType, scopeId)
+  typeEnv[symbol] = _generalizeType(newType, scopeId)
   return
 
 # Modifies typeEnv in-place
-_applySubstEnv = (typeEnv, subst) ->
+_applySubstEnv = (subst) ->
   for k, v of typeEnv
     typeEnv[k] = _applySubstScheme(v, subst)
   return
@@ -216,23 +217,23 @@ _parseSingleType = (nonFnTypeNode, typevarMap) ->
   typevarMap[typeId] = newType
   return newType
 
-_parseTypes = (astNode, typeEnv) ->
+_parseTypes = (astNode) ->
   # If astNode is an array, gen types for each element
   if astNode.length?
     for child in astNode
-      _parseTypes(child, typeEnv)
+      _parseTypes(child)
     return
 
   if astNode.isNumber()
     symbol = symbolTable.getNodeSymbol(astNode)
     type = _genConcreteType(PRIMITIVES.I32)
-    _setSymbolType(typeEnv, symbol, type)
+    _setSymbolType(symbol, type)
     return type
 
   if astNode.isBoolean()
     symbol = symbolTable.getNodeSymbol(astNode)
     type = _genConcreteType(PRIMITIVES.BOOL)
-    _setSymbolType(typeEnv, symbol, type)
+    _setSymbolType(symbol, type)
     return type
 
   if astNode.isVariable()
@@ -248,19 +249,19 @@ _parseTypes = (astNode, typeEnv) ->
     # If function def assignment, deal with recursion by assigning a dummy
     # typevar to the target
     #if astNode.children.source.isFunctionDef()
-    #  _assignSymbolType(typeEnv, targetSymbol, _genVariableType())
-    type = _parseTypes(astNode.children.source, typeEnv)
+    #  _assignSymbolType(targetSymbol, _genVariableType())
+    type = _parseTypes(astNode.children.source)
     if not type?
       console.error("No type found for node: #{JSON.stringify(astNode.children.source)}")
       process.exit(1)
-    _assignSymbolType(typeEnv, targetSymbol, type)
+    _assignSymbolType(targetSymbol, type)
     return
 
   if astNode.isFunctionDef()
     for argNode in astNode.children.args
       symbol = symbolTable.getNodeSymbol(argNode)
-      _setSymbolType(typeEnv, symbol, _genVariableType())
-    _parseTypes(astNode.children.body, typeEnv)
+      _setSymbolType(symbol, _genVariableType())
+    _parseTypes(astNode.children.body)
     # Generate function def type from args and return symbol
     typeArr = []
     for argNode in astNode.children.args
@@ -269,25 +270,25 @@ _parseTypes = (astNode, typeEnv) ->
     # Any return node inside the function will have unified with returnSymbol
     returnSymbol = symbolTable.scopeReturnSymbol(astNode)
     if not typeEnv[returnSymbol]?
-      _setSymbolType(typeEnv, returnSymbol, _genConcreteType(PRIMITIVES.VOID))
+      _setSymbolType(returnSymbol, _genConcreteType(PRIMITIVES.VOID))
     typeArr.push(_instantiateScheme(typeEnv[returnSymbol]))
     # Set function def symbol type
     functionDefType = _genFunctionType(typeArr)
     functionDefSymbol = symbolTable.getNodeSymbol(astNode)
-    _setSymbolType(typeEnv, functionDefSymbol, functionDefType)
+    _setSymbolType(functionDefSymbol, functionDefType)
     return functionDefType
 
   if astNode.isReturn()
-    childType = _parseTypes(astNode.children.returnVal, typeEnv)
+    childType = _parseTypes(astNode.children.returnVal)
     if not childType?
       console.error("No type found for node: #{JSON.stringify(astNode.children.returnVal)}")
       process.exit(1)
     returnSymbol = symbolTable.scopeReturnSymbol(astNode)
-    _assignSymbolType(typeEnv, returnSymbol, childType)
+    _assignSymbolType(returnSymbol, childType)
     return
 
   if astNode.isFunctionCall()
-    _parseTypes(astNode.children.args, typeEnv)
+    _parseTypes(astNode.children.args)
     # Assemble function type from args and dummy return
     typeArr = []
     for argNode in astNode.children.args
@@ -296,29 +297,29 @@ _parseTypes = (astNode, typeEnv) ->
     returnType = _genVariableType()
     typeArr.push(returnType)
     # Unify function type with type pulled from function definition
-    fnDefType = _parseTypes(astNode.children.fn, typeEnv)
+    fnDefType = _parseTypes(astNode.children.fn)
     subst = _unifyTypes(fnDefType, _genFunctionType(typeArr))
-    _applySubstEnv(typeEnv, subst)
+    _applySubstEnv(subst)
     # Function call type is unified return type
     fnCallType = _applySubstType(returnType, subst)
     symbol = symbolTable.getNodeSymbol(astNode)
-    _setSymbolType(typeEnv, symbol, fnCallType)
+    _setSymbolType(symbol, fnCallType)
     return fnCallType
 
   if astNode.isTypeDef()
     symbol = symbolTable.getNodeSymbol(astNode)
     type = _parseTypeAnnotation(astNode.children.type)
-    _assignSymbolType(typeEnv, symbol, type)
+    _assignSymbolType(symbol, type)
     return
 
   if astNode.isWast()
     symbol = symbolTable.getNodeSymbol(astNode)
     type = _genVariableType()
-    _setSymbolType(typeEnv, symbol, type)
+    _setSymbolType(symbol, type)
     return type
 
   for name, child of astNode.children
-    _parseTypes(child, typeEnv)
+    _parseTypes(child)
 
   return
 
