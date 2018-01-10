@@ -29,7 +29,7 @@ NODE_TYPES = [
   '_TypeDef_'
   '_TypeclassDef_'
   '_Typeclass_'
-  '_TypeInst_'
+  '_Typeinst_'
   '_Type_'
   '_Variable_'
   '_OpExpression_'

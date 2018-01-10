@@ -13,7 +13,7 @@ fix type inference issues
   checker will be too permissive
 - ensure fn args are not generalized. particularly an issue if an arg is
   reassigned inside a fn
-- deal with recursion. also, mutual recursion via global fns / closures
+- deal with recursion. also, mutual recursion via global fns / closures / typeinsts
 fix typeclass issues
 - implement runtime overloading via dictionaries
 - allow constructed types

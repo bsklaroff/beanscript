@@ -12,7 +12,7 @@ GRAMMAR = {
     '_Assignment_'
     '_TypeDef_'
     '_TypeclassDef_'
-    '_TypeInst_'
+    '_Typeinst_'
     'expr'
     '_Comment_'
     'EMPTY'
@@ -53,7 +53,7 @@ GRAMMAR = {
     '_ID_{primitive} EMPTY{params[]}'
   ]
 
-  _TypeInst_: [
+  _Typeinst_: [
     'TYPEINST _ID_{class} _ID_{type} INDENT NEWLINE fnDefObj{fnDefs[]} UNINDENT'
   ]
   fnDefObj: [

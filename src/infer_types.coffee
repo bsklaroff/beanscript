@@ -14,6 +14,7 @@ FORMS =
 symbolTable = null
 typeCount = null
 superclasses = null
+fnTypeclasses = null
 typeclassEnv = null
 typeEnv = null
 
@@ -21,6 +22,7 @@ inferTypes = (rootNode, _symbolTable) ->
   symbolTable = _symbolTable
   typeCount = -1
   superclasses = {}
+  fnTypeclasses = {}
   typeclassEnv = {}
   typeEnv = {}
   _parseSupertypes(rootNode)
@@ -72,7 +74,7 @@ _parseSupertypes = (rootNode) ->
       superclasses[typeclass] = {}
       for superclass in astNode.children.superclasses
         superclasses[typeclass][superclass.literal] = true
-    else if astNode.isTypeInst()
+    else if astNode.isTypeinst()
       typeclass = astNode.children.class.literal
       type = astNode.children.type.literal
       superclasses[type] ?= {}
@@ -84,33 +86,46 @@ _parseSupertypes = (rootNode) ->
 Parse explicit type definitions, in typeclasses or otherwise
 ###
 
-_parseTypeDefs = (astNode) ->
+_parseTypeDefs = (astNode, typeclassInfo = null) ->
   if astNode.length?
     for child in astNode
-      _parseTypeDefs(child)
+      _parseTypeDefs(child, typeclassInfo)
+  else if astNode.isTypeclassDef()
+    typeclass = astNode.children.typeclass
+    className = typeclass.children.class.literal
+    anonType = typeclass.children.anonType.literal
+    _parseTypeDefs(astNode.children.body, {className: className, anonType: anonType})
   else if astNode.isTypeDef()
     symbol = symbolTable.getNodeSymbol(astNode)
     if symbol of typeEnv
       console.error("Multiple type annotations for symbol #{symbol}")
       process.exit(1)
-    {type, context} = _parseTypeAnnotation(astNode.children.type)
-    for typevar, typeclasses of context
-      typeclassEnv[typevar] = typeclasses
+    {type, anonTypevarMap, anonContext} = _parseTypeAnnotation(astNode.children.type)
     _assignSymbolType(symbol, type)
+    # The following code deals with typeclasses
+    # First, map typevars -> context using maps of anon -> typevar and anon -> context
+    for anonType, typevar of anonTypevarMap
+      if anonType of anonContext
+        typeclassEnv[typevar.var] = anonContext[anonType]
+    # Also, if we're inside a typeclass, map the fn name to its typeclassInfo
+    if typeclassInfo?
+      typeclassAnon = typeclassInfo.anonType
+      if typeclassAnon not of anonTypevarMap or typeclassAnon not of anonContext
+        console.error("Typeclass anonType #{typeclassAnon} not found in context of type def: #{JSON.stringify(astNode)}")
+        process.exit(1)
+      variableType = anonTypevarMap[typeclassAnon]
+      newInfo = {className: typeclassInfo.className, typevar: variableType.var}
+      fnTypeclasses[symbol] = newInfo
   else
     for name, child of astNode.children
-      _parseTypeDefs(child)
+      _parseTypeDefs(child, typeclassInfo)
   return
 
-_parseTypeAnnotation = (typeWithContext) ->
-  typevarMap = {}
-  type = _parseTypeNode(typeWithContext.children.type, typevarMap)
-  contextMap = _parseTypeContext(typeWithContext.children.context)
-  context = {}
-  for anonType, typevar of typevarMap
-    if anonType of contextMap
-      context[typevar.var] = contextMap[anonType]
-  return {type, context}
+_parseTypeAnnotation = (typeWithContext, typeclassInfo) ->
+  anonTypevarMap = {}
+  type = _parseTypeNode(typeWithContext.children.type, anonTypevarMap)
+  anonContext = _parseTypeContext(typeWithContext.children.context)
+  return {type, anonTypevarMap, anonContext}
 
 _parseTypeContext = (contextNodes) ->
   contextMap = {}
@@ -183,6 +198,9 @@ _parseTypes = (astNode) ->
 
   if astNode.isAssignment()
     targetSymbol = symbolTable.getNodeSymbol(astNode.children.target)
+    if targetSymbol of fnTypeclasses
+      console.error("Typeclass fn #{targetSymbol} defined outside a typeinst")
+      process.exit(1)
     # If function def assignment, deal with recursion by assigning a dummy
     # typevar to the target
     #if astNode.children.source.isFunctionDef()
@@ -192,6 +210,25 @@ _parseTypes = (astNode) ->
       console.error("No type found for node: #{JSON.stringify(astNode.children.source)}")
       process.exit(1)
     _assignSymbolType(targetSymbol, type)
+    return
+
+  if astNode.isTypeinst()
+    instType = astNode.children.type.literal
+    for fnDefPropNode in astNode.children.fnDefs
+      fnDefNode = fnDefPropNode.children.fnDef
+      fnDefType = _parseTypes(fnDefNode)
+      # Grab typedef from typeclass
+      targetSymbol = symbolTable.getNodeSymbol(fnDefPropNode)
+      if targetSymbol not of typeEnv or targetSymbol not of fnTypeclasses
+        console.error("Typeinst fn #{targetSymbol} is not defined in any typeclass")
+        process.exit(1)
+      typeclassFnScheme = typeEnv[targetSymbol]
+      typeclassInfo = fnTypeclasses[targetSymbol]
+      # Substitute typeinst type into typeclass typedef
+      typeinstFnType = _instantiateSubstScheme(typeclassFnScheme, typeclassInfo.typevar, instType)
+      # Unify calculated fn type with type parsed from the fn def
+      subst = _unifyTypes(typeinstFnType, fnDefType)
+      _applySubstEnv(subst)
     return
 
   if astNode.isFunctionDef()
@@ -301,6 +338,23 @@ _instantiateScheme = (scheme) ->
     subst[typevar] = newTypevar
     if typevar of typeclassEnv
       typeclassEnv[newTypevar.var] = utils.cloneDeep(typeclassEnv[typevar])
+  return _applySubstType(scheme.type, subst)
+
+_instantiateSubstScheme = (scheme, substTypevar, substType) ->
+  subst = {}
+  found = false
+  for typevar in scheme.forall
+    if typevar == substTypevar
+      found = true
+      newType = _genConcreteType(substType)
+    else
+      newType = _genVariableType()
+    subst[typevar] = newType
+    if typevar of typeclassEnv and newType.form == FORMS.VARIABLE
+      typeclassEnv[newType.var] = utils.cloneDeep(typeclassEnv[typevar])
+  if not found
+    console.error("Typevar #{substTypevar} failed to substitute into scheme #{scheme}")
+    process.exit(1)
   return _applySubstType(scheme.type, subst)
 
 _setSymbolType = (symbol, type) ->

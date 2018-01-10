@@ -19,6 +19,11 @@ _parseSymbols = (astNode) ->
     targetName = target.children.id.literal
     symbolTable.setNamedSymbol(target, targetName)
 
+  else if astNode.isFnDefProp()
+    _parseSymbols(astNode.children.fnDef)
+    fnName = astNode.children.fnName.literal
+    symbolTable.setNamedSymbol(astNode, fnName)
+
   else if astNode.isOpParenGroup()
     _parseSymbols(astNode.children.opExpr)
     symbolTable.setAnonSymbol(astNode)
@@ -53,40 +58,6 @@ _parseSymbols = (astNode) ->
   else if astNode.isTypeDef()
     symbolName = astNode.children.name.literal
     symbolTable.setNamedSymbol(astNode, symbolName)
-
-    ###
-  else if astNode.isTypeclassDef()
-    typeclass = astNode.children.typeclass
-    className = typeclass.children.class.literal
-    anonType = typeclass.children.anonType.literal
-    superclasses = utils.map(astNode.children.superclasses, (a) -> a.literal)
-    defaultType = null
-    if not astNode.children.default.isEmpty()
-      defaultType = Type.fromTypeWithContext(astNode.children.default)
-    fns = []
-    for typeDef in astNode.children.body
-      fnName = typeDef.children.name.literal
-      fnType = Type.fromTypeWithContext(typeDef.children.type)
-      fnDefSymbol = symbolTable.getOrAddSymbol(typeDef, fnName)
-      symbolTable.setTypeclass(fnDefSymbol, className, anonType, fnType)
-      fns.push(fnDefSymbol.name)
-    symbolTable.typeclasses[className] =
-      supers: superclasses
-      fns: fns
-      default: defaultType
-
-  else if astNode.isTypeInst()
-    instClass = astNode.children.class.literal
-    instType = astNode.children.type.literal
-    fnDefProps = astNode.children.fnDefs
-    _parseSymbols(fnDefProps, parentFnDefSymbol)
-    for fnDefProp in fnDefProps
-      fnDef = fnDefProp.children.fnDef
-      fnDefSymbol = symbolTable.getASTNodeSymbol(fnDef)
-      target = fnDefProp.children.fnName
-      targetSymbol = symbolTable.getOrAddSymbol(target, target.literal)
-      symbolTable.addTypeInst(targetSymbol, instType, fnDefSymbol.name)
-    ###
 
   else
     for name, child of astNode.children

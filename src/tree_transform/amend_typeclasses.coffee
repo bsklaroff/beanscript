@@ -23,7 +23,7 @@ amendTypeclasses = (rootNode) ->
         context = typeDefNode.children.type.children.context
         context.push(newTypeclassNode)
     # If astNode is a typeinst, prepend all fn names with '@'
-    else if astNode.isTypeInst()
+    else if astNode.isTypeinst()
       for fnDefPropNode in astNode.children.fnDefs
         fnName = fnDefPropNode.children.fnName.literal
         fnDefPropNode.children.fnName.literal = "@#{fnName}"
