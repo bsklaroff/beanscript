@@ -1,0 +1,18 @@
+typeclass crazy a
+  useless :: (i32, (a) -> a) -> i32
+
+typeinst crazy bool
+  useless: (x, fn) ->
+    if fn(x > 5)
+      return 10
+    return -3
+
+yes = (b) -> true
+id = (b) -> b
+
+@lol = (x, fn) -> @useless(x, fn)
+
+@print(@lol(8, yes))
+@print(@useless(8, id))
+@print(@useless(4, yes))
+@print(@useless(4, id))

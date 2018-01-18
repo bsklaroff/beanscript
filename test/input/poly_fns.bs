@@ -2,4 +2,8 @@
 add3 = (x, y, z) -> x + y + z
 @print(add3(@id(10), 2, 5))
 @print(@id(true))
+@print(@id(@id(100)))
+
+applyArith = (fn, x, y) -> fn(x, y)
+@print(applyArith(@__sub__, 5, 30))
 

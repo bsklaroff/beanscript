@@ -1,3 +1,7 @@
-a = (x) -> x + 23
-b = 47
-c = a(b)
+a = (x, y) -> x + y
+b = a
+c = b(2, 3)
+d = (x) -> x + x
+applyFn :: ((i32) -> i32) -> i32
+applyFn = (fn) -> fn(3)
+applyFn(d)

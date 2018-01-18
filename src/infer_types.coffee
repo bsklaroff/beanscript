@@ -13,22 +13,23 @@ FORMS =
 
 symbolTable = null
 typeCount = null
+fnTypeclasses = null
 superclasses = null
 typeclassEnv = null
-fnTypeclasses = null
 typeEnv = null
 
 inferTypes = (rootNode, _symbolTable) ->
   symbolTable = _symbolTable
   typeCount = -1
+  fnTypeclasses = {}
   superclasses = {}
   typeclassEnv = {}
-  fnTypeclasses = {}
   typeEnv = {}
   _parseSupertypes(rootNode)
   _parseTypeDefs(rootNode)
   _parseTypes(rootNode)
-  return {fnTypeclasses, typeEnv}
+  _addContextTypevars()
+  return {superclasses, typeclassEnv, typeEnv}
 
 ###
 Type object generation functions
@@ -302,18 +303,18 @@ _generalizeType = (type, scopeId) ->
 
 _ftvOfEnv = (scopeId) ->
   ftv = {}
-  for symbol, schema of typeEnv
+  for symbol, scheme of typeEnv
     if symbolTable.getScope(symbol) == scopeId
-      schemaFtv = _ftvOfSchema(schema)
-      for k of schemaFtv
+      schemeFtv = _ftvOfScheme(scheme)
+      for k of schemeFtv
         ftv[k] = true
   return ftv
 
-_ftvOfSchema = (schema) ->
+_ftvOfScheme = (scheme) ->
   ftv = {}
-  typeFtv = _ftvOfType(schema.type)
+  typeFtv = _ftvOfType(scheme.type)
   for k of typeFtv
-    if k not in schema.forall
+    if k not in scheme.forall
       ftv[k] = true
   return ftv
 
@@ -499,6 +500,19 @@ _unifyTypes = (t0, t1) ->
     return _composeSubsts(_unifyTypes(t0new, t1new), subst)
   console.error("Failed to unify types: #{JSON.stringify(t0)}, #{JSON.stringify(t1)}")
   process.exit(1)
+  return
+
+###
+For each polymorphic function, specify list of typevars that must be supplied as arguments
+###
+
+_addContextTypevars = ->
+  for symbol, scheme of typeEnv
+    if scheme.type.form == FORMS.FUNCTION
+      scheme.type.contextTypevars = []
+      for typevar of _ftvOfType(scheme.type)
+        if typevar of typeclassEnv
+          scheme.type.contextTypevars.push(typevar)
   return
 
 module.exports = inferTypes

@@ -20,12 +20,12 @@ TYPE_INDICES =
   bool: 4
 
 symbolTable = null
-fnTypeclasses = null
 typeEnv = null
+typeclassEnv = null
 
 genWast = (rootNode, _symbolTable, typeInfo) ->
   symbolTable = _symbolTable
-  {fnTypeclasses, typeEnv} = typeInfo
+  {typeEnv, typeclassEnv} = typeInfo
   # Parse typeinsts to map typeclass fns to fn defs
   fnDefs = []
   typeclassFns = _getTypeclassFns(rootNode)
@@ -45,10 +45,9 @@ genWast = (rootNode, _symbolTable, typeInfo) ->
   fnSigs = {}
   for fnDef in nonTypeinstFnDefs
     fnType = typeEnv[fnDef.symbol].type
-    argTypevars = _getArgTypevars(fnType)
     returnsVoid = _isVoid(fnType.arr[fnType.arr.length - 1])
-    fnSigs[argTypevars.length + fnType.arr.length] ?= {}
-    fnSigs[argTypevars.length + fnType.arr.length][returnsVoid] = true
+    fnSigs[fnType.contextTypevars.length + fnType.arr.length] ?= {}
+    fnSigs[fnType.contextTypevars.length + fnType.arr.length][returnsVoid] = true
   # Generate wast
   sexprs = []
   # Generate fnsig type definitions
@@ -103,12 +102,12 @@ _getFnDefs = (astNode) ->
   if astNode.length?
     for child in astNode
       fnDefs = fnDefs.concat(_getFnDefs(child))
-  else if astNode.isFunctionDef()
+    return fnDefs
+  if astNode.isFunctionDef()
     symbol = symbolTable.getNodeSymbol(astNode)
     fnDefs.push({symbol: symbol, astNode: astNode})
-  else
-    for name, child of astNode.children
-      fnDefs = fnDefs.concat(_getFnDefs(child))
+  for name, child of astNode.children
+    fnDefs = fnDefs.concat(_getFnDefs(child))
   return fnDefs
 
 _getNonTypeclassGlobals = (rootNode, typeclassFns) ->
@@ -128,18 +127,6 @@ _getNonTypeclassGlobals = (rootNode, typeclassFns) ->
     nonTypeclassGlobals[targetSymbol] = true
   return nonTypeclassGlobals
 
-_getArgTypevars = (type) ->
-  if type.form != FORMS.FUNCTION
-    console.error("Cannot get arg typevars for non-fn type #{JSON.stringify(type)}")
-    process.exit(1)
-  argTypevars = []
-  seenTypevars = {}
-  for subtype, i in type.arr
-    if subtype.form == FORMS.VARIABLE and subtype.var not of seenTypevars
-      argTypevars.push({name: subtype.var, loc: i})
-      seenTypevars[subtype.var] = true
-  return argTypevars
-
 _genSigSymbol = (argCount, returnsVoid) ->
   voidStr = if returnsVoid then 'void' else ''
   return "$fnsig#{argCount - 1}#{voidStr}"
@@ -157,9 +144,9 @@ _genFn = (symbol, args, statements, scopeId) ->
   sexpr = ['func', symbol]
   # Don't generate args for main fn
   if utils.isString(symbol)
-    sexpr = sexpr.concat(_genTypevarArgs(symbol))
-    sexpr = sexpr.concat(_genArgs(argSymbols))
     fnType = typeEnv[symbol].type
+    argSymbols = fnType.contextTypevars.concat(argSymbols)
+    sexpr = sexpr.concat(_genArgs(argSymbols))
     if not _isVoid(fnType.arr[fnType.arr.length - 1])
       sexpr.push(['result', 'i32'])
   sexpr = sexpr.concat(_genLocals(symbol, argSymbols, scopeId))
@@ -168,29 +155,27 @@ _genFn = (symbol, args, statements, scopeId) ->
 
 _genTypeclassFn = (fnDef) ->
   {symbol, insts} = fnDef
-  type = typeEnv[symbol].type
+  fnType = typeEnv[symbol].type
   argSymbols = []
-  for argType, i in type.arr[...type.arr.length - 1]
+  # For polymorphic fns, include context typevars as args
+  for contextTypevar in fnType.contextTypevars
+    argSymbols.push(contextTypevar)
+  for argType, i in fnType.arr[...fnType.arr.length - 1]
     argSymbols.push("$arg#{i}")
-  returnsVoid = _isVoid(type.arr[type.arr.length - 1])
   # Generate sexpr
   sexpr = ['func', symbol]
-  for argTypevar in _getArgTypevars(type)
-    sexpr.push(['param', argTypevar.name, 'i32'])
-  for argSymbol in argSymbols
-    sexpr.push(['param', argSymbol, 'i32'])
+  sexpr = sexpr.concat(_genArgs(argSymbols))
+  returnsVoid = _isVoid(fnType.arr[fnType.arr.length - 1])
   if not returnsVoid
     sexpr.push(['result', 'i32'])
   # For each possible type of the typeclass typevar, add an if statement and
   # call the correct typeinst fn def
-  typevar = fnTypeclasses[symbol].typevar
   for instType, fnDefSymbol of insts
     fnCallSexpr = ['call', fnDefSymbol]
-    for argTypevar in _getArgTypevars(typeEnv[fnDefSymbol].type)
-      fnCallSexpr.push(['get_local', argTypevar.name])
-    for argSymbol in argSymbols
+    for argSymbol in argSymbols[1..]
       fnCallSexpr.push(['get_local', argSymbol])
-    ifSexpr = ['if', ['i32.eq', ['get_local', typevar], ['i32.const', TYPE_INDICES[instType]]]]
+    # TODO: ensure that typeclass typevar is always first amongst contextTypevars
+    ifSexpr = ['if', ['i32.eq', ['get_local', argSymbols[0]], ['i32.const', TYPE_INDICES[instType]]]]
     if returnsVoid
       ifSexpr.push(['then', fnCallSexpr])
     else
@@ -198,14 +183,6 @@ _genTypeclassFn = (fnDef) ->
     sexpr.push(ifSexpr)
   if not returnsVoid
     sexpr.push(['return', ['i32.const', '-1']])
-  return sexpr
-
-_genTypevarArgs = (symbol) ->
-  sexpr = []
-  fnType = typeEnv[symbol].type
-  argTypevars = _getArgTypevars(fnType)
-  for argTypevar in argTypevars
-    sexpr.push(['param', argTypevar.name, 'i32'])
   return sexpr
 
 _genArgs = (argSymbols) ->
@@ -219,7 +196,7 @@ _genLocals = (fnNameSymbol, argSymbols, scopeId) ->
   # Gen (local ...) var declerations
   for symbol, scheme of typeEnv
     if symbolTable.getScope(symbol) == scopeId and not symbolTable.isGlobal(symbol) and
-    not symbolTable.isReturn(symbol) and symbol not in argSymbols and symbol != fnNameSymbol
+       not symbolTable.isReturn(symbol) and symbol not in argSymbols and symbol != fnNameSymbol
       sexprs.push(['local', symbol, 'i32'])
   return sexprs
 
@@ -256,14 +233,16 @@ _genSexprs = (astNode) ->
     # Get type signature from fn def type
     fnName = symbolTable.getNodeSymbol(astNode.children.fn)
     fnType = typeEnv[fnName].type
-    argTypevars = _getArgTypevars(fnType)
     returnsVoid = _isVoid(fnType.arr[fnType.arr.length - 1])
-    fnCallSexpr.push(_genSigSymbol(argTypevars.length + fnType.arr.length, returnsVoid))
-    # Pass type arguments
+    fnCallSexpr.push(_genSigSymbol(fnType.arr.length + fnType.contextTypevars.length, returnsVoid))
+    # Pull out concrete symbols to use in contextTypevar search
     argSymbols = utils.map(args, (arg) -> symbolTable.getNodeSymbol(arg))
-    for argTypevar in argTypevars
-      argType = typeEnv[argSymbols[argTypevar.loc]].type
-      fnCallSexpr.push(_getTypeIndex(argType))
+    fnCallSymbol = symbolTable.getNodeSymbol(astNode)
+    # For polymorphic fns, pass context typevar types
+    # Find each typevar by recursive searching the fnType
+    for contextTypevar in fnType.contextTypevars
+      contextType = _findContextTypevar(contextTypevar, fnType.arr, argSymbols.concat(fnCallSymbol))
+      fnCallSexpr.push(contextType)
     # Pass actual arguments
     for argSymbol in argSymbols
       fnCallSexpr.push(_get(argSymbol))
@@ -271,7 +250,6 @@ _genSexprs = (astNode) ->
     fnCallSexpr.push(_get(fnName))
     # Assign return value to function call symbol
     # Set return value if function is not void
-    fnCallSymbol = symbolTable.getNodeSymbol(astNode)
     if not _isVoid(typeEnv[fnCallSymbol].type)
       fnCallSexpr = _set(fnCallSymbol, fnCallSexpr)
     sexprs.push(fnCallSexpr)
@@ -279,16 +257,12 @@ _genSexprs = (astNode) ->
   else if astNode.isNumber()
     symbol = symbolTable.getNodeSymbol(astNode)
     #type = typeEnv[symbol].type
-    sexprs.push(['i32.store', ['get_global', '$hp'], ['i32.const', astNode.literal]])
-    sexprs.push(_set(symbol, ['get_global', '$hp']))
-    sexprs.push(['set_global', '$hp', ['i32.add', ['get_global', '$hp'], ['i32.const', '4']]])
+    sexprs = sexprs.concat(_setHeapVar(symbol, ['i32.const', astNode.literal]))
 
   else if astNode.isBoolean()
     symbol = symbolTable.getNodeSymbol(astNode)
     literal = if astNode.literal == 'true' then 1 else 0
-    sexprs.push(['i32.store', ['get_global', '$hp'], ['i32.const', literal]])
-    sexprs.push(_set(symbol, ['get_global', '$hp']))
-    sexprs.push(['set_global', '$hp', ['i32.add', ['get_global', '$hp'], ['i32.const', '4']]])
+    sexprs = sexprs.concat(_setHeapVar(symbol, ['i32.const', literal]))
 
   else if astNode.isWast()
     symbol = symbolTable.getNodeSymbol(astNode)
@@ -297,9 +271,7 @@ _genSexprs = (astNode) ->
     if type.form != FORMS.CONCRETE
       sexprs.push(wastSexpr)
     else
-      sexprs.push([_getStoreFn(type), ['get_global', '$hp'], wastSexpr])
-      sexprs.push(_set(symbol, ['get_global', '$hp']))
-      sexprs.push(['set_global', '$hp', ['i32.add', ['get_global', '$hp'], _getTypeSize(type)]])
+      sexprs = sexprs.concat(_setHeapVar(symbol, wastSexpr))
 
   else if astNode.isReturn()
     returnVal = astNode.children.returnVal
@@ -325,6 +297,33 @@ _get = (symbol) ->
   if symbolTable.isGlobal(symbol) or symbolTable.isFunctionDef(symbol)
     return ['get_global', symbol]
   return ['get_local', symbol]
+
+# TODO: recursively search function arguments for context typevar
+_findContextTypevar = (typevar, typeArr, argAndReturnSymbols) ->
+  for type, i in typeArr
+    # If we found a symbol corresponding to our context typevar, try to return it
+    if type.form == FORMS.VARIABLE and type.var == typevar
+      targetScheme = typeEnv[argAndReturnSymbols[i]]
+      targetType = targetScheme.type
+      if targetType.form == FORMS.CONCRETE
+        # We found a concrete type, return it
+        return _getTypeIndex(targetType)
+      else if targetType.form == FORMS.VARIABLE and targetType.var not in targetScheme.forall
+        # We found a typevar arg from the enclosing function, return it
+        return _getTypeIndex(targetType)
+      else if targetType.form == FORMS.FUNCTION
+        # Function types cannot be typeclassed for now
+        console.error('Function type cannot be passed as a context typevar')
+        process.exit(1)
+  return
+
+_setHeapVar = (symbol, dataSexpr) ->
+  type = typeEnv[symbol].type
+  sexprs = []
+  sexprs.push(_set(symbol, ['get_global', '$hp']))
+  sexprs.push([_getStoreFn(type), ['get_global', '$hp'], dataSexpr])
+  sexprs.push(['set_global', '$hp', ['i32.add', ['get_global', '$hp'], _getTypeSize(type)]])
+  return sexprs
 
 _getTypeIndex = (type) ->
   if type.form == FORMS.FUNCTION
