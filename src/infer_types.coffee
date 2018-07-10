@@ -29,6 +29,7 @@ inferTypes = (rootNode, _symbolTable) ->
   _parseTypeDefs(rootNode)
   _parseTypes(rootNode)
   _addContextTypevars()
+  #_compileTimeCurryTransform(rootNode)
   return {superclasses, typeclassEnv, typeEnv}
 
 ###
@@ -514,5 +515,62 @@ _addContextTypevars = ->
         if typevar of typeclassEnv
           scheme.type.contextTypevars.push(typevar)
   return
+
+###
+Look for arguments that are themselves functions, where the context typevars of
+the passed function and the definition function argument do not match. If this
+occurs, create a new version of the passed function with matching context
+typevars by currying / uncurrying it.
+# TODO: recrusively search function arguments for context typevars
+###
+
+_compileTimeCurryTransform = (astNode) ->
+  if astNode.length?
+    for child in astNode
+      _compileTimeCurryTransform(child)
+  else if astNode.isFunctionCall()
+    args = astNode.children.args
+    argSymbols = utils.map(args, (arg) -> symbolTable.getNodeSymbol(arg))
+    fnName = symbolTable.getNodeSymbol(astNode.children.fn)
+    defArgTypes = typeEnv[fnName].type.arr
+    for argSymbol, i in argSymbols
+      argType = typeEnv[argSymbol].type
+      if argType.form == FORMS.FUNCTION
+        _curryFn(astNode, argType, defArgTypes[i])
+
+_curryFn = (astNode, passedFnType, defFnType) ->
+  if defFnType.form != FORMS.FUNCTION
+    return
+
+  typevarMappings = []
+  for contextTypevar in passedFnType.contextTypevars
+    for passedArgType, i in passedFnType.arr
+      if passedArgType.form == FORMS.VARIABLE and passedArgType.var == contextTypevar
+        defArgType = defFnType.arr[i]
+        if defArgType.form == FORMS.CONCRETE or
+           (defArgType.form == FORMS.VARIABLE and defArgType.var in defFnType.contextTypevars)
+          typevarMappings.push(defArgType)
+          break
+  if typevarMappings.length != passFnType.contextTypevar.length
+    console.error("Could not curry fn type #{passedFnType} with def type #{defFnType}")
+    process.exit(1)
+
+  newFnName = "#{astNode.children.fn}_curry#{curryCount}"
+  astNode.children.fn = newFnName
+  curryCount++
+
+  sexpr = ['func', newFnName]
+  argSymbols = utils.map(astNode.children.args, (arg) -> symbolTable.getNodeSymbol(arg))
+  argSymbols = defFnType.contextTypvars.concat(argSymbols)
+  sexpr = sexpr.concat(_genArgs(argSymbols))
+  if not _isVoid(passedFnType.arr[passedFnType.arr.length - 1])
+    sexpr.push(['result', 'i32'])
+
+  # First of all, this should be moved to gen_wast if we ever do this
+  # Second, we have a big problem, which is that we don't know which defined
+  # function we should be currying here, since functions can be reassigned.
+  # So astNode.children.fn could is likely just a local var assigned to a
+  # global fn name
+
 
 module.exports = inferTypes

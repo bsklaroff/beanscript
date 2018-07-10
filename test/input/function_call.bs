@@ -1,7 +1,7 @@
 a = (x, y) -> x + y
 b = a
 c = b(2, 3)
-d = (x) -> x + x
-applyFn :: ((i32) -> i32) -> i32
+d = (x) -> x + 5
+applyFn :: (num a) => ((i32) -> a) -> a
 applyFn = (fn) -> fn(3)
 applyFn(d)
