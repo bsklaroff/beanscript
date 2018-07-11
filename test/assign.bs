@@ -1,0 +1,8 @@
+a = 1
+b = true
+c = a
+d = b
+@print(a)
+@print(b)
+@print(c)
+@print(d)

@@ -1,23 +1,28 @@
+{execSync} = require('child_process')
 fs = require('fs')
 path = require('path')
 bs = require('./main')
 utils = require('./src/utils')
 
-inputDir = "#{__dirname}/test/input"
-typeOutputDir = "#{__dirname}/test/type_output"
-for fname in fs.readdirSync(inputDir)
+testDir = "#{__dirname}/test"
+for fname in fs.readdirSync(testDir)
   if path.extname(fname) != '.bs'
     continue
-  types = bs.main(["#{inputDir}/#{fname}",  '-t'])
-  outputFname = "#{fname[...-3]}.json"
-  if not fs.existsSync("#{typeOutputDir}/#{outputFname}")
-    console.log(JSON.stringify(types, null, 2))
-    console.error("No output file found for #{fname}")
+  temp = execSync('mktemp').toString().trim()
+  temp2 = execSync('mktemp').toString().trim()
+  execSync("coffee #{__dirname}/main.coffee #{testDir}/#{fname} > #{temp}")
+  execSync("wast2wasm #{temp} -o #{temp2}")
+  stdout = execSync("node #{__dirname}/runwasm.js #{temp2}").toString()
+  execSync("rm #{temp}")
+  execSync("rm #{temp2}")
+  outputFname = "#{fname[...-3]}.stdout"
+  if not fs.existsSync("#{testDir}/#{outputFname}")
+    console.error("No stdout file found for #{fname}")
     process.exit(1)
-  expected = JSON.parse(fs.readFileSync("#{typeOutputDir}/#{outputFname}"))
-  if utils.equals(types, expected)
+  expected = fs.readFileSync("#{testDir}/#{outputFname}").toString()
+  if stdout == expected
     console.log("PASSED: #{fname}")
   else
     console.log("FAILED: #{fname}")
-    console.log("OUTPUT: #{JSON.stringify(types)}")
-    console.log("EXPECTED: #{JSON.stringify(expected)}")
+    console.log("OUTPUT:\n#{stdout}")
+    console.log("EXPECTED:\n#{expected}")
