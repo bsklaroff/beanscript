@@ -223,6 +223,16 @@ _genSexprs = (astNode) ->
     sexprs = sexprs.concat(_genSexprs(child))
     sexprs.push(_set(opParenSymbol, _get(childSymbol)))
 
+  else if astNode.isWhile()
+    cond = astNode.children.condition
+    condSymbol = symbolTable.getNodeSymbol(cond)
+    body = astNode.children.body
+    loopSexpr = ['loop'].concat(_genSexprs(cond))
+    loopSexpr.push(['br_if', 1, ['i32.eq', ['i32.const', 0], _unbox(condSymbol)]])
+    loopSexpr = loopSexpr.concat(_genSexprs(body))
+    loopSexpr.push(['br', 0])
+    sexprs.push(['block', loopSexpr])
+
   else if astNode.isFunctionCall()
     # TODO: account for anonymous / nested fns
     # Generate code for arguments
@@ -404,7 +414,7 @@ _parseBSWast = (astNode) ->
 _shouldAddNewline = (arr, i) ->
   if utils.isArray(arr[0])
     return true
-  if arr[0] == 'func'
+  if arr[0] in ['loop', 'func']
     # Add newline at end only if we added a newline for the last element in arr
     if i == -1
       i = arr.length - 2

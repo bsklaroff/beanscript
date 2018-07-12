@@ -1,0 +1,4 @@
+a = 2 - 5 * 3 + 4 / 4
+b = -a * -a
+@print(a)
+@print(b)
