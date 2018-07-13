@@ -17,30 +17,26 @@ OP_MAP =
   _OR_: '@__or__'
   _NEG_: '@__neg__'
 
-replaceOpsWithFns = (astNode) ->
+replaceOpsWithFnCalls = (astNode) ->
   # Check if astNode is an array
   if astNode.length?
     for child, i in astNode
-      astNode[i] = replaceOpsWithFns(child)
+      astNode[i] = replaceOpsWithFnCalls(child)
     return astNode
   # Replace ops with fns for all children
   for name, child of astNode.children
-    astNode.children[name] = replaceOpsWithFns(child)
+    astNode.children[name] = replaceOpsWithFnCalls(child)
   # If this node is an op, replace with a fn call
   resNode = astNode
   if astNode.isOpExpression()
     idNode = ASTNode.make('_ID_', OP_MAP[astNode.children.op.name])
     varNode = ASTNode.make('_Variable_')
-    varNode.children =
-      id: idNode
-      props: []
+    varNode.children = {id: idNode}
     resNode = ASTNode.make('_FunctionCall_')
-    resNode.children =
-      fn: varNode
-      args: []
+    resNode.children = {fn: varNode, args: []}
     if not astNode.children.lhs.isEmpty()
       resNode.children.args.push(astNode.children.lhs)
     resNode.children.args.push(astNode.children.rhs)
   return resNode
 
-module.exports = replaceOpsWithFns
+module.exports = replaceOpsWithFnCalls

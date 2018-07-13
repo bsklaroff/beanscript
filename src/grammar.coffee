@@ -84,12 +84,15 @@ GRAMMAR = {
   ]
 
   _Assignment_: [
-    '_Variable_{target} EQUALS fnDefOrExpr{source}'
+    '_Assignable_{target} EQUALS fnDefOrExpr{source}'
+  ]
+  _Assignable_: [
+    '_Variable_{base} varExt*{exts[]}'
   ]
   _Variable_: [
-    '_ID_{id} varProp*{props[]}'
+    '_ID_{id}'
   ]
-  varProp: [
+  varExt: [
     'LEFT_SQUARE expr RIGHT_SQUARE'
     'DOT _ID_'
   ]
@@ -114,11 +117,10 @@ GRAMMAR = {
   ]
   nonOpExpr: [
     '_OpParenGroup_'
-    '_FunctionCall_'
     '_Array_'
     '_ArrayRange_'
     '_BOOLEAN_'
-    '_Variable_'
+    '_VarOrFnCall_'
     '_String_'
     '_Wast_'
     '_NUMBER_'
@@ -141,16 +143,16 @@ GRAMMAR = {
     '_OR_'
   ]
 
-  _FunctionCall_: [
-    'callable{fn} argList{args[]}'
+  _VarOrFnCall_: [
+    '_Variable_{base} varExtOrArgList*{exts[]}'
+    'LEFT_PAREN _FunctionDef_{base} RIGHT_PAREN (_ArgList_ varExtOrArgList*){exts[]}'
   ]
-  callable: [
-    '_Variable_'
-    'LEFT_PAREN _FunctionCall_ RIGHT_PAREN'
-    'LEFT_PAREN _FunctionDef_ RIGHT_PAREN'
+  varExtOrArgList: [
+    'varExt'
+    '_ArgList_'
   ]
-  argList: [
-    'LEFT_PAREN argListInner RIGHT_PAREN'
+  _ArgList_: [
+    'LEFT_PAREN argListInner{args[]} RIGHT_PAREN'
   ]
   argListInner: [
     'fnDefOrExpr (COMMA fnDefOrExpr)*'
@@ -197,7 +199,7 @@ GRAMMAR = {
   ]
   sexprSymbol: [
     '_Sexpr_'
-    '_Variable_'
+    '_Assignable_'
     '_DoubleQuoteString_'
     '_NUMBER_'
   ]

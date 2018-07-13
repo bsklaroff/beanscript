@@ -395,18 +395,21 @@ _parseBSWast = (astNode) ->
       sexpr.push(_parseBSWast(child))
     return sexpr
 
+  # TODO: handle ArrayRefs
+
+  # TODO: handle more than single level of nesting
+  # TODO: check typeEnv for symbol instead of just passing through string
+  else if astNode.isObjectRef()
+    varName = astNode.children.obj.children.id.literal
+    refStr = astNode.children.ref.literal
+    return "#{varName}.#{refStr}"
+
   else if astNode.isVariable()
     varName = astNode.children.id.literal
-    props = astNode.children.props
     symbol = symbolTable.getSymbolName(varName, astNode.scopeId)
-    # If variable exists in outer scope, replace it with a proper wast reference
-    if props.length == 0 and symbol of typeEnv
+    if symbol of typeEnv
       return _unbox(symbol)
-    # Otherwise, pass the string through
-    str = varName
-    for prop in props
-      str += ".#{prop.literal}"
-    return str
+    return varName
 
   else if astNode.isNumber()
     return astNode.literal
