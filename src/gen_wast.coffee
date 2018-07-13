@@ -10,14 +10,16 @@ PRIMITIVES =
 FORMS =
   CONCRETE: 'concrete'
   VARIABLE: 'variable'
+  ARRAY: 'array'
   FUNCTION: 'function'
 
 TYPE_INDICES =
   function: 0
-  void: 1
-  i32: 2
-  i64: 3
-  bool: 4
+  array: 1
+  void: 2
+  i32: 3
+  i64: 4
+  bool: 5
 
 symbolTable = null
 typeEnv = null
@@ -321,6 +323,10 @@ _findContextTypevar = (typevar, typeArr, argAndReturnSymbols) ->
       else if targetType.form == FORMS.VARIABLE and targetType.var not in targetScheme.forall
         # We found a typevar arg from the enclosing function, return it
         return _getTypeIndex(targetType)
+      else if targetType.form == FORMS.ARRAY
+        # Array types cannot be typeclassed for now
+        console.error('Array type cannot be passed as a context typevar')
+        process.exit(1)
       else if targetType.form == FORMS.FUNCTION
         # Function types cannot be typeclassed for now
         console.error('Function type cannot be passed as a context typevar')
@@ -334,28 +340,6 @@ _setHeapVar = (symbol, dataSexpr) ->
   sexprs.push([_getStoreFn(type), ['get_global', '$hp'], dataSexpr])
   sexprs.push(['set_global', '$hp', ['i32.add', ['get_global', '$hp'], _getTypeSize(type)]])
   return sexprs
-
-_getTypeIndex = (type) ->
-  if type.form == FORMS.FUNCTION
-    return ['i32.const', TYPE_INDICES[type.form]]
-  else if type.form == FORMS.CONCRETE
-    return ['i32.const', TYPE_INDICES[type.name]]
-  else if type.form == FORMS.VARIABLE
-    return ['get_local', type.var]
-  return
-
-_unbox = (symbol) ->
-  type = typeEnv[symbol].type
-  if type.form != FORMS.CONCRETE
-    console.error("Could not unbox non-concrete type: #{JSON.stringify(type)}")
-    process.exit(1)
-  if type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
-    return ['i32.load', _get(symbol)]
-  else if type.name == PRIMITIVES.I64
-    return ['i64.load', _get(symbol)]
-  console.error("Unbox unimplemented for type: #{JSON.stringify(type)}")
-  process.exit(1)
-  return
 
 _getStoreFn = (type) ->
   if type.form != FORMS.CONCRETE
@@ -378,6 +362,28 @@ _getTypeSize = (type) ->
   else if type.name == PRIMITIVES.I64
     return ['i32.const', '8']
   console.error("Type size unimplemented for type: #{JSON.stringify(type)}")
+  process.exit(1)
+  return
+
+_getTypeIndex = (type) ->
+  if type.form in [FORMS.FUNCTION, FORMS.ARRAY]
+    return ['i32.const', TYPE_INDICES[type.form]]
+  else if type.form == FORMS.CONCRETE
+    return ['i32.const', TYPE_INDICES[type.name]]
+  else if type.form == FORMS.VARIABLE
+    return ['get_local', type.var]
+  return
+
+_unbox = (symbol) ->
+  type = typeEnv[symbol].type
+  if type.form != FORMS.CONCRETE
+    console.error("Could not unbox non-concrete type: #{JSON.stringify(type)}")
+    process.exit(1)
+  if type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+    return ['i32.load', _get(symbol)]
+  else if type.name == PRIMITIVES.I64
+    return ['i64.load', _get(symbol)]
+  console.error("Unbox unimplemented for type: #{JSON.stringify(type)}")
   process.exit(1)
   return
 

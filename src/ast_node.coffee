@@ -36,6 +36,7 @@ NODE_TYPES = [
   '_OpParenGroup_'
   '_FunctionCall_'
   '_Array_'
+  '_ArrayRange_'
   '_FunctionDef_'
   '_FunctionDefArg_'
   '_FnDefProp_'

@@ -9,6 +9,7 @@ PRIMITIVES =
 FORMS =
   CONCRETE: 'concrete'
   VARIABLE: 'variable'
+  ARRAY: 'array'
   FUNCTION: 'function'
 
 symbolTable = null
@@ -52,6 +53,12 @@ _genVariableType = ->
   return {
     form: FORMS.VARIABLE
     var: "$t#{typeCount}"
+  }
+
+_genArrayType = ->
+  return {
+    form: FORMS.ARRAY
+    item: _genVariableType()
   }
 
 _genFunctionType = (arr) ->
@@ -193,6 +200,21 @@ _parseTypes = (astNode) ->
       console.error("Symbol #{symbol} referenced before assignment")
       process.exit(1)
     return _instantiateScheme(scheme)
+
+  if astNode.isArray()
+    symbol = symbolTable.getNodeSymbol(astNode)
+    type = _genArrayType()
+    for itemNode in astNode.children.items
+      itemType = _parseTypes(itemNode)
+      subst = _unifyTypes(type.item, itemType)
+      _applySubstEnv(subst)
+      type.item = _applySubstType(type.item)
+    _setSymbolType(symbol, type)
+    return type
+
+  # TODO
+  if astNode.isArrayRange()
+    return
 
   if astNode.isAssignment()
     targetSymbol = symbolTable.getNodeSymbol(astNode.children.target)
@@ -394,6 +416,8 @@ _applySubstType = (type, subst) ->
     if type.var of subst
       return subst[type.var]
     newType.var = type.var
+  else if type.form == FORMS.ARRAY
+    newType.item = _applySubstType(type.item, subst)
   else if type.form == FORMS.FUNCTION
     newType.arr = []
     for subtype in type.arr
@@ -413,6 +437,8 @@ _typevarOccurs = (typevar, type) ->
     return false
   if type.form == FORMS.VARIABLE
     return typevar == type.var
+  if type.form == FORMS.ARRAY
+    return _typevarOccurs(typevar, type.item)
   if type.form == FORMS.FUNCTION
     for subtype in type.arr
       if _typevarOccurs(typevar, subtype)
@@ -436,7 +462,11 @@ _bindVariableType = (typevar, type) ->
 _bindTypeclasses = (typevar, type) ->
   if typevar not of typeclassEnv
     return
-  if type.form == FORMS.FUNCTION
+  if type.form == FORMS.ARRAY
+    # Array typeclasses unimplemented for now
+    console.error("Cannot bind typeclasses of #{typevar} with array type #{JSON.stringify(type)}")
+    process.exit(1)
+  else if type.form == FORMS.FUNCTION
     # Higher-kinded typeclasses unimplemented for now
     console.error("Cannot bind typeclasses of #{typevar} with function type #{JSON.stringify(type)}")
     process.exit(1)
@@ -489,6 +519,8 @@ _unifyTypes = (t0, t1) ->
     return _bindVariableType(t0.var, t1)
   if t1.form == FORMS.VARIABLE
     return _bindVariableType(t1.var, t0)
+  if t0.form == FORMS.ARRAY and t1.form == FORMS.ARRAY
+    return _unifyTypes(t0.item, t1.item)
   if t0.form == FORMS.FUNCTION and t1.form == FORMS.FUNCTION and t0.arr.length == t1.arr.length
     if t0.arr.length == 0
       return {}

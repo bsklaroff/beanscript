@@ -153,12 +153,8 @@ GRAMMAR = {
     'LEFT_PAREN argListInner RIGHT_PAREN'
   ]
   argListInner: [
-    'argListInner0'
+    'fnDefOrExpr (COMMA fnDefOrExpr)*'
     'EMPTY'
-  ]
-  argListInner0: [
-    'fnDefOrExpr COMMA argListInner0'
-    'fnDefOrExpr'
   ]
 
   _Array_: [
@@ -166,6 +162,9 @@ GRAMMAR = {
   ]
   _ArrayRange_: [
     'LEFT_SQUARE expr{start} TWO_DOT expr{end} RIGHT_SQUARE'
+    'LEFT_SQUARE expr{start} TWO_DOT _EMPTY_{end} RIGHT_SQUARE'
+    'LEFT_SQUARE _EMPTY_{start} TWO_DOT expr{end} RIGHT_SQUARE'
+    'LEFT_SQUARE _EMPTY_{start} TWO_DOT _EMPTY_{end} RIGHT_SQUARE'
   ]
 
   _String_: [

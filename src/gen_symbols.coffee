@@ -24,6 +24,15 @@ _parseSymbols = (astNode) ->
     fnName = astNode.children.fnName.literal
     symbolTable.setNamedSymbol(astNode, fnName)
 
+  else if astNode.isArray()
+    _parseSymbols(astNode.children.items)
+    symbolTable.setAnonSymbol(astNode)
+
+  else if astNode.isArrayRange()
+    _parseSymbols(astNode.children.start)
+    _parseSymbols(astNode.children.end)
+    symbolTable.setAnonSymbol(astNode)
+
   else if astNode.isOpParenGroup()
     _parseSymbols(astNode.children.opExpr)
     symbolTable.setAnonSymbol(astNode)
