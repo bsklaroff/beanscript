@@ -1,0 +1,23 @@
+arr = [23, 0, -47]
+@print(arr[0])
+@print(arr[1])
+@print(arr[2])
+nested_arr = [[], [5, 10], arr]
+arr[1] = arr[0] * arr[2]
+@print(arr[0])
+@print(arr[1])
+@print(arr[2])
+@print(nested_arr[1][0])
+@print(nested_arr[1][1])
+@print(nested_arr[2][0])
+@print(nested_arr[2][1])
+@print(nested_arr[2][2])
+nested_arr[2][0] = nested_arr[1][0] + 7
+@print(arr[0])
+@print(arr[1])
+@print(arr[2])
+@print(nested_arr[1][0])
+@print(nested_arr[1][1])
+@print(nested_arr[2][0])
+@print(nested_arr[2][1])
+@print(nested_arr[2][2])

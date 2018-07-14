@@ -213,10 +213,23 @@ _genSexprs = (astNode) ->
   if astNode.isAssignment()
     source = astNode.children.source
     sourceSymbol = symbolTable.getNodeSymbol(source)
-    target = astNode.children.target
-    targetSymbol = symbolTable.getNodeSymbol(target)
     sexprs = sexprs.concat(_genSexprs(source))
-    sexprs.push(_set(targetSymbol, _get(sourceSymbol)))
+    target = astNode.children.target
+    if target.isVariable()
+      targetSymbol = symbolTable.getNodeSymbol(target)
+      sexprs.push(_set(targetSymbol, _get(sourceSymbol)))
+    else if target.isArrayRef()
+      arr = target.children.arr
+      ref = target.children.ref
+      sexprs = sexprs.concat(_genSexprs(arr))
+      sexprs = sexprs.concat(_genSexprs(ref))
+      arrSymbol = symbolTable.getNodeSymbol(arr)
+      refSymbol = symbolTable.getNodeSymbol(ref)
+      heapOffset = ['i32.mul', ['i32.add', ['i32.const', 1], _unbox(refSymbol)], _getTypeSize(_genConcreteType(PRIMITIVES.I32))]
+      heapLoc = ['i32.add', _get(arrSymbol), heapOffset]
+      sexprs.push(['i32.store', heapLoc, _get(sourceSymbol)])
+    else
+      console.error("Assignment target must be variable or array ref, found #{JSON.stringify(target)}")
 
   else if astNode.isOpParenGroup()
     opParenSymbol = symbolTable.getNodeSymbol(astNode)
@@ -234,6 +247,30 @@ _genSexprs = (astNode) ->
     loopSexpr = loopSexpr.concat(_genSexprs(body))
     loopSexpr.push(['br', 0])
     sexprs.push(['block', loopSexpr])
+
+  else if astNode.isArray()
+    itemNodes = astNode.children.items
+    sexprs = sexprs.concat(_genSexprs(itemNodes))
+    arrSymbol = symbolTable.getNodeSymbol(astNode)
+    sexprs = sexprs.concat(_setHeapVar(arrSymbol, ['i32.const', itemNodes.length]))
+    for itemNode in itemNodes
+      itemSymbol = symbolTable.getNodeSymbol(itemNode)
+      sexprs = sexprs.concat(_addToHeap(_genConcreteType(PRIMITIVES.I32), _get(itemSymbol)))
+
+  #TODO: astNode.isArrayRange
+
+  #TODO: ensure ref is within array bounds
+  else if astNode.isArrayRef()
+    arr = astNode.children.arr
+    ref = astNode.children.ref
+    sexprs = sexprs.concat(_genSexprs(arr))
+    sexprs = sexprs.concat(_genSexprs(ref))
+    arrSymbol = symbolTable.getNodeSymbol(arr)
+    refSymbol = symbolTable.getNodeSymbol(ref)
+    heapOffset = ['i32.mul', ['i32.add', ['i32.const', 1], _unbox(refSymbol)], _getTypeSize(_genConcreteType(PRIMITIVES.I32))]
+    heapLoc = ['i32.add', _get(arrSymbol), heapOffset]
+    symbol = symbolTable.getNodeSymbol(astNode)
+    sexprs.push(_set(symbol, ['i32.load', heapLoc]))
 
   else if astNode.isFunctionCall()
     # TODO: account for anonymous / nested fns
@@ -266,6 +303,7 @@ _genSexprs = (astNode) ->
       fnCallSexpr = _set(fnCallSymbol, fnCallSexpr)
     sexprs.push(fnCallSexpr)
 
+  # TODO: fix number defaulting instead of hardcoding i32
   else if astNode.isNumber()
     symbol = symbolTable.getNodeSymbol(astNode)
     #type = typeEnv[symbol].type
@@ -292,6 +330,12 @@ _genSexprs = (astNode) ->
     sexprs.push(['return', _get(returnValSymbol)])
 
   return sexprs
+
+_genConcreteType = (name) ->
+  return {
+    form: FORMS.CONCRETE
+    name: name
+  }
 
 _isVoid = (type) -> type.form == FORMS.CONCRETE and type.name == PRIMITIVES.VOID
 
@@ -334,18 +378,21 @@ _findContextTypevar = (typevar, typeArr, argAndReturnSymbols) ->
   return
 
 _setHeapVar = (symbol, dataSexpr) ->
-  type = typeEnv[symbol].type
-  sexprs = []
-  sexprs.push(_set(symbol, ['get_global', '$hp']))
-  sexprs.push([_getStoreFn(type), ['get_global', '$hp'], dataSexpr])
-  sexprs.push(['set_global', '$hp', ['i32.add', ['get_global', '$hp'], _getTypeSize(type)]])
+  sexprs = [_set(symbol, ['get_global', '$hp'])]
+  sexprs = sexprs.concat(_addToHeap(typeEnv[symbol].type, dataSexpr))
   return sexprs
 
+_addToHeap = (type, dataSexpr) ->
+  return [
+    [_getStoreFn(type), ['get_global', '$hp'], dataSexpr]
+    ['set_global', '$hp', ['i32.add', ['get_global', '$hp'], _getTypeSize(type)]]
+  ]
+
 _getStoreFn = (type) ->
-  if type.form != FORMS.CONCRETE
-    console.error("Could not get store fn for non-concrete type: #{JSON.stringify(type)}")
+  if type.form not in [FORMS.CONCRETE, FORMS.ARRAY]
+    console.error("Could not get store fn for non-concrete, non-array type: #{JSON.stringify(type)}")
     process.exit(1)
-  if type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+  if type.form == FORMS.ARRAY or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
     return 'i32.store'
   else if type.name == PRIMITIVES.I64
     return 'i64.store'
@@ -354,10 +401,10 @@ _getStoreFn = (type) ->
   return
 
 _getTypeSize = (type) ->
-  if type.form != FORMS.CONCRETE
+  if type.form not in [FORMS.CONCRETE, FORMS.ARRAY]
     console.error("Could not get type size for non-concrete type: #{JSON.stringify(type)}")
     process.exit(1)
-  if type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+  if type.form == FORMS.ARRAY or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
     return ['i32.const', '4']
   else if type.name == PRIMITIVES.I64
     return ['i32.const', '8']

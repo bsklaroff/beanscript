@@ -13,12 +13,6 @@ _parseSymbols = (astNode) ->
       _parseSymbols(child)
     return
 
-  if astNode.isAssignment()
-    _parseSymbols(astNode.children.source)
-    target = astNode.children.target
-    targetName = target.children.id.literal
-    symbolTable.setNamedSymbol(target, targetName)
-
   else if astNode.isFnDefProp()
     _parseSymbols(astNode.children.fnDef)
     fnName = astNode.children.fnName.literal
@@ -31,6 +25,11 @@ _parseSymbols = (astNode) ->
   else if astNode.isArrayRange()
     _parseSymbols(astNode.children.start)
     _parseSymbols(astNode.children.end)
+    symbolTable.setAnonSymbol(astNode)
+
+  else if astNode.isArrayRef()
+    _parseSymbols(astNode.children.arr)
+    _parseSymbols(astNode.children.ref)
     symbolTable.setAnonSymbol(astNode)
 
   else if astNode.isOpParenGroup()

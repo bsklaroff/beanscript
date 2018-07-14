@@ -208,7 +208,7 @@ _parseTypes = (astNode) ->
       itemType = _parseTypes(itemNode)
       subst = _unifyTypes(type.item, itemType)
       _applySubstEnv(subst)
-      type.item = _applySubstType(type.item)
+      type.item = _applySubstType(type.item, subst)
     _setSymbolType(symbol, type)
     return type
 
@@ -216,11 +216,23 @@ _parseTypes = (astNode) ->
   if astNode.isArrayRange()
     return
 
+  if astNode.isArrayRef()
+    arrType = _parseTypes(astNode.children.arr)
+    refType = _parseTypes(astNode.children.ref)
+    subst = _unifyTypes(refType, _genConcreteType(PRIMITIVES.I32))
+    _applySubstEnv(subst)
+    symbol = symbolTable.getNodeSymbol(astNode)
+    _setSymbolType(symbol, arrType.item)
+    return arrType.item
+
   if astNode.isAssignment()
-    targetSymbol = symbolTable.getNodeSymbol(astNode.children.target)
+    target = astNode.children.target
+    targetSymbol = symbolTable.getNodeSymbol(target)
     if targetSymbol of fnTypeclasses
       console.error("Typeclass fn #{targetSymbol} defined outside a typeinst")
       process.exit(1)
+    if not target.isVariable()
+      _parseTypes(target)
     # If function def assignment, deal with recursion by assigning a dummy
     # typevar to the target
     #if astNode.children.source.isFunctionDef()
@@ -379,7 +391,7 @@ _instantiateSubstScheme = (scheme, substTypevar, substType) ->
 
 _setSymbolType = (symbol, type) ->
   if typeEnv[symbol]?
-    console.error("Cannot set type #{type} for symbol #{symbol} which already has scheme #{typeEnv[symbol]}")
+    console.error("Cannot set type #{JSON.stringify(type)} for symbol #{symbol} which already has scheme #{JSON.stringify(typeEnv[symbol])}")
     process.exit(1)
   typeEnv[symbol] = _genScheme([], type)
   return
