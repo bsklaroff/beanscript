@@ -55,7 +55,7 @@ _parseSymbols = (astNode) ->
     symbolTable.setAnonSymbol(astNode, astNode.literal)
 
   else if astNode.isWast()
-    symbolTable.setAnonSymbol(astNode, astNode.literal)
+    symbolTable.setAnonSymbol(astNode)
 
   else if astNode.isFunctionDef()
     _parseSymbols(astNode.children.args)

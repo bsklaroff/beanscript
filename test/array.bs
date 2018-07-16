@@ -21,3 +21,5 @@ nested_arr[2][0] = nested_arr[1][0] + 7
 @print(nested_arr[2][0])
 @print(nested_arr[2][1])
 @print(nested_arr[2][2])
+@print(@len(arr))
+@print(@len(nested_arr))

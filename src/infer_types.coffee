@@ -6,11 +6,14 @@ PRIMITIVES =
   BOOL: 'bool'
   VOID: 'void'
 
+CONSTRUCTORS =
+  ARR: 'arr'
+
 FORMS =
   CONCRETE: 'concrete'
   VARIABLE: 'variable'
-  ARRAY: 'array'
   OBJECT: 'object'
+  CONSTRUCTED: 'constructed'
   FUNCTION: 'function'
 
 symbolTable = null
@@ -56,10 +59,11 @@ _genVariableType = ->
     var: "$t#{typeCount}"
   }
 
-_genArrayType = ->
+_genConstructedType = (name, params) ->
   return {
-    form: FORMS.ARRAY
-    item: _genVariableType()
+    form: FORMS.CONSTRUCTED
+    name: name
+    params: params
   }
 
 _genObjectType = ->
@@ -163,9 +167,15 @@ _parseTypeNode = (typeNode, typevarMap) ->
     resArr.push(_parseTypeNode(subtypeNode, typevarMap))
   return _genFunctionType(resArr)
 
-# TODO: parse type params here
 _parseSingleType = (nonFnTypeNode, typevarMap) ->
   typeId = nonFnTypeNode.children.primitive.literal
+  paramNodes = nonFnTypeNode.children.params
+  # Check for constructed type
+  if paramNodes.length > 0
+    params = []
+    for paramNode in paramNodes
+      params.push(_parseTypeNode(paramNode, typevarMap))
+    return _genConstructedType(typeId, params)
   if typeId in utils.values(PRIMITIVES)
     return _genConcreteType(typeId)
   if typeId of typevarMap
@@ -211,12 +221,12 @@ _parseTypes = (astNode) ->
 
   if astNode.isArray()
     symbol = symbolTable.getNodeSymbol(astNode)
-    type = _genArrayType()
+    type = _genConstructedType(CONSTRUCTORS.ARR, [_genVariableType()])
     for itemNode in astNode.children.items
       itemType = _parseTypes(itemNode)
-      subst = _unifyTypes(type.item, itemType)
+      subst = _unifyTypes(type.params[0], itemType)
       _applySubstEnv(subst)
-      type.item = _applySubstType(type.item, subst)
+      type = _applySubstType(type, subst)
     _setSymbolType(symbol, type)
     return type
 
@@ -238,18 +248,6 @@ _parseTypes = (astNode) ->
     type.keys.sort()
     _setSymbolType(symbol, type)
     return type
-
-  if astNode.isArrayRef()
-    arrType = _parseTypes(astNode.children.arr)
-    refType = _parseTypes(astNode.children.ref)
-    if arrType.form != FORMS.ARRAY
-      console.error("Array ref should have array type: #{JSON.stringify(astNode.children.arr)}, #{arrType}")
-      process.exit(1)
-    subst = _unifyTypes(refType, _genConcreteType(PRIMITIVES.I32))
-    _applySubstEnv(subst)
-    symbol = symbolTable.getNodeSymbol(astNode)
-    _setSymbolType(symbol, arrType.item)
-    return arrType.item
 
   if astNode.isObjectRef()
     objType = _parseTypes(astNode.children.obj)
@@ -332,6 +330,17 @@ _parseTypes = (astNode) ->
     _assignSymbolType(returnSymbol, childType)
     return
 
+  if astNode.isReturnPtr()
+    childType = _parseTypes(astNode.children.returnVal)
+    if not childType?
+      console.error("No type found for node: #{JSON.stringify(astNode.children.returnVal)}")
+      process.exit(1)
+    childSymbol = symbolTable.getNodeSymbol(astNode.children.returnVal)
+    _assignSymbolType(childSymbol, _genConcreteType(PRIMITIVES.I32))
+    returnSymbol = symbolTable.scopeReturnSymbol(astNode.scopeId)
+    _assignSymbolType(returnSymbol, _genVariableType())
+    return
+
   if astNode.isFunctionCall()
     _parseTypes(astNode.children.args)
     # Assemble function type from args and dummy return
@@ -395,6 +404,11 @@ _ftvOfType = (type) ->
   ftv = {}
   if type.form == FORMS.VARIABLE
     ftv[type.var] = true
+  else if type.form == FORMS.CONSTRUCTED
+    for subtype in type.params
+      subFtv = _ftvOfType(subtype)
+      for k of subFtv
+        ftv[k] = true
   else if type.form == FORMS.FUNCTION
     for subtype in type.arr
       subFtv = _ftvOfType(subtype)
@@ -467,8 +481,11 @@ _applySubstType = (type, subst) ->
     if type.var of subst
       return subst[type.var]
     newType.var = type.var
-  else if type.form == FORMS.ARRAY
-    newType.item = _applySubstType(type.item, subst)
+  else if type.form == FORMS.CONSTRUCTED
+    newType.name = type.name
+    newType.params = []
+    for param in type.params
+      newType.params.push(_applySubstType(param, subst))
   else if type.form == FORMS.OBJECT
     newType.keys = []
     newType.props = {}
@@ -494,8 +511,11 @@ _typevarOccurs = (typevar, type) ->
     return false
   if type.form == FORMS.VARIABLE
     return typevar == type.var
-  if type.form == FORMS.ARRAY
-    return _typevarOccurs(typevar, type.item)
+  if type.form == FORMS.CONSTRUCTED
+    for param in type.params
+      if _typevarOccurs(typevar, param)
+        return true
+    return false
   if type.form == FORMS.OBJECT
     for key in type.keys
       if _typevarOccurs(typevar, type.props[key])
@@ -524,9 +544,9 @@ _bindVariableType = (typevar, type) ->
 _bindTypeclasses = (typevar, type) ->
   if typevar not of typeclassEnv
     return
-  if type.form == FORMS.ARRAY
-    # Array typeclasses unimplemented for now
-    console.error("Cannot bind typeclasses of #{typevar} with array type #{JSON.stringify(type)}")
+  if type.form == FORMS.CONSTRUCTED
+    # Constructed typeclasses unimplemented for now
+    console.error("Cannot bind typeclasses of #{typevar} with constructed type #{JSON.stringify(type)}")
     process.exit(1)
   else if type.form == FORMS.OBJECT
     # Object typeclasses unimplemented for now
@@ -585,8 +605,15 @@ _unifyTypes = (t0, t1) ->
     return _bindVariableType(t0.var, t1)
   if t1.form == FORMS.VARIABLE
     return _bindVariableType(t1.var, t0)
-  if t0.form == FORMS.ARRAY and t1.form == FORMS.ARRAY
-    return _unifyTypes(t0.item, t1.item)
+  if t0.form == FORMS.CONSTRUCTED and t1.form == FORMS.CONSTRUCTED and t0.params.length == t1.params.length
+    if t0.params.length == 0
+      return {}
+    subst = _unifyTypes(t0.params[0], t1.params[0])
+    t0new = _applySubstType(t0, subst)
+    t1new = _applySubstType(t1, subst)
+    t0new.params = t0new.params[1..]
+    t1new.params = t1new.params[1..]
+    return _composeSubsts(_unifyTypes(t0new, t1new), subst)
   if t0.form == FORMS.OBJECT and t1.form == FORMS.OBJECT and t0.keys == t1.keys
     if t0.keys.length == 0
       return {}
@@ -609,6 +636,7 @@ _unifyTypes = (t0, t1) ->
     t1new.arr = t1new.arr[1..]
     return _composeSubsts(_unifyTypes(t0new, t1new), subst)
   console.error("Failed to unify types: #{JSON.stringify(t0)}, #{JSON.stringify(t1)}")
+  console.trace()
   process.exit(1)
   return
 

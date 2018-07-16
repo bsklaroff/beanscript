@@ -7,10 +7,14 @@ PRIMITIVES =
   BOOL: 'bool'
   VOID: 'void'
 
+CONSTRUCTORS =
+  ARR: 'arr'
+
 FORMS =
   CONCRETE: 'concrete'
   VARIABLE: 'variable'
-  ARRAY: 'array'
+  OBJECT: 'object'
+  CONSTRUCTED: 'constructed'
   FUNCTION: 'function'
 
 TYPE_INDICES =
@@ -218,16 +222,6 @@ _genSexprs = (astNode) ->
     if target.isVariable()
       targetSymbol = symbolTable.getNodeSymbol(target)
       sexprs.push(_set(targetSymbol, _get(sourceSymbol)))
-    else if target.isArrayRef()
-      arr = target.children.arr
-      ref = target.children.ref
-      sexprs = sexprs.concat(_genSexprs(arr))
-      sexprs = sexprs.concat(_genSexprs(ref))
-      arrSymbol = symbolTable.getNodeSymbol(arr)
-      refSymbol = symbolTable.getNodeSymbol(ref)
-      heapOffset = ['i32.mul', ['i32.add', ['i32.const', 1], _unbox(refSymbol)], _getTypeSize(_genConcreteType(PRIMITIVES.I32))]
-      heapLoc = ['i32.add', _get(arrSymbol), heapOffset]
-      sexprs.push(['i32.store', heapLoc, _get(sourceSymbol)])
     else if target.isObjectRef()
       obj = target.children.obj
       sexprs = sexprs.concat(_genSexprs(obj))
@@ -261,7 +255,8 @@ _genSexprs = (astNode) ->
     itemNodes = astNode.children.items
     sexprs = sexprs.concat(_genSexprs(itemNodes))
     arrSymbol = symbolTable.getNodeSymbol(astNode)
-    sexprs = sexprs.concat(_setHeapVar(arrSymbol, ['i32.const', itemNodes.length]))
+    sexprs.push(_set(arrSymbol, ['get_global', '$hp']))
+    sexprs = sexprs.concat(_addToHeap(_genConcreteType(PRIMITIVES.I32), ['i32.const', itemNodes.length]))
     for itemNode in itemNodes
       itemSymbol = symbolTable.getNodeSymbol(itemNode)
       sexprs = sexprs.concat(_addToHeap(_genConcreteType(PRIMITIVES.I32), _get(itemSymbol)))
@@ -279,19 +274,6 @@ _genSexprs = (astNode) ->
 
   else if astNode.isObjectProp()
     sexprs = sexprs.concat(_genSexprs(astNode.children.val))
-
-  #TODO: ensure ref is within array bounds
-  else if astNode.isArrayRef()
-    arr = astNode.children.arr
-    ref = astNode.children.ref
-    sexprs = sexprs.concat(_genSexprs(arr))
-    sexprs = sexprs.concat(_genSexprs(ref))
-    arrSymbol = symbolTable.getNodeSymbol(arr)
-    refSymbol = symbolTable.getNodeSymbol(ref)
-    heapOffset = ['i32.mul', ['i32.add', ['i32.const', 1], _unbox(refSymbol)], _getTypeSize(_genConcreteType(PRIMITIVES.I32))]
-    heapLoc = ['i32.add', _get(arrSymbol), heapOffset]
-    symbol = symbolTable.getNodeSymbol(astNode)
-    sexprs.push(_set(symbol, ['i32.load', heapLoc]))
 
   else if astNode.isObjectRef()
     obj = astNode.children.obj
@@ -361,6 +343,12 @@ _genSexprs = (astNode) ->
     sexprs = sexprs.concat(_genSexprs(returnVal))
     sexprs.push(['return', _get(returnValSymbol)])
 
+  else if astNode.isReturnPtr()
+    returnVal = astNode.children.returnVal
+    returnValSymbol = symbolTable.getNodeSymbol(returnVal)
+    sexprs = sexprs.concat(_genSexprs(returnVal))
+    sexprs.push(['return', _unbox(returnValSymbol)])
+
   return sexprs
 
 _genConcreteType = (name) ->
@@ -421,10 +409,10 @@ _addToHeap = (type, dataSexpr) ->
   ]
 
 _getStoreFn = (type) ->
-  if type.form not in [FORMS.CONCRETE, FORMS.ARRAY]
-    console.error("Could not get store fn for non-concrete, non-array type: #{JSON.stringify(type)}")
+  if type.form != FORMS.CONCRETE
+    console.error("Could not get store fn for non-concrete type: #{JSON.stringify(type)}")
     process.exit(1)
-  if type.form == FORMS.ARRAY or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+  if type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
     return 'i32.store'
   else if type.name == PRIMITIVES.I64
     return 'i64.store'
@@ -482,6 +470,14 @@ _parseBSWast = (astNode) ->
     varName = astNode.children.obj.children.id.literal
     refStr = astNode.children.ref.literal
     return "#{varName}.#{refStr}"
+
+  else if astNode.isIdRef()
+    varName = astNode.literal[1..]
+    symbol = symbolTable.getSymbolName(varName, astNode.scopeId)
+    if symbol not of typeEnv
+      console.error("Ref id #{astNode.literal} not found in type env")
+      process.exit(1)
+    return _get(symbol)
 
   else if astNode.isVariable()
     varName = astNode.children.id.literal

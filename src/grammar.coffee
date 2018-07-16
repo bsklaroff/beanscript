@@ -6,6 +6,7 @@ GRAMMAR = {
     'statement (NEWLINE statement)*'
   ]
   statement: [
+    '_ReturnPtr_'
     '_Return_'
     '_If_'
     '_While_'
@@ -65,6 +66,9 @@ GRAMMAR = {
 
   _Return_: [
     'RETURN fnDefOrExpr{returnVal}'
+  ]
+  _ReturnPtr_: [
+    'RETURN_PTR fnDefOrExpr{returnVal}'
   ]
 
   _If_: [
@@ -213,6 +217,7 @@ GRAMMAR = {
   sexprSymbol: [
     '_Sexpr_'
     '_Assignable_'
+    '_ID_REF_'
     '_DoubleQuoteString_'
     '_NUMBER_'
   ]
@@ -242,6 +247,7 @@ GRAMMAR = {
   WHITESPACE: '[ \t]*'
   ANY_SPACE: '[ \t\n]*'
   RETURN: 'return'
+  RETURN_PTR: 'return_ptr'
   IF: 'if'
   WHILE: 'while'
   ELSE: 'else'
@@ -251,6 +257,7 @@ GRAMMAR = {
   DOT: '\\.'
   COLON: ':'
   _ID_: '[@_$a-zA-Z][_$a-zA-Z0-9]*'
+  _ID_REF_: '&[@_$a-zA-Z][_$a-zA-Z0-9]*'
   _NUMBER_: '[0-9]+(\\.[0-9]*)?'
   _BOOLEAN_: '(true|false)'
   LEFT_PAREN: '\\('

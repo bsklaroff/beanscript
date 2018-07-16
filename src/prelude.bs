@@ -56,3 +56,27 @@ typeinst eq bool
     ((call $print (i32.const 2)))
   __eq__: (x, y) -> ((i32.eq x y))
   __neq__: (x, y) -> ((i32.ne x y))
+
+# Array methods
+
+@len :: (arr<a>) -> i32
+@len = (arr) -> ((i32.load &arr))
+
+# TODO: check array bounds
+@__arr_set__ :: (arr<a>, i32, a) -> void
+@__arr_set__ = (arr, idx, val) ->
+  heapOffset :: i32
+  heapLoc :: i32
+  heapOffset = ((i32.mul (i32.add (i32.const 1) idx) (i32.const 4)))
+  heapLoc = ((i32.add &arr heapOffset))
+  ((i32.store heapLoc &val))
+
+# TODO: check array bounds
+@__arr_get__ :: (arr<a>, i32) -> a
+@__arr_get__ = (arr, idx) ->
+  heapOffset :: i32
+  heapLoc :: i32
+  heapOffset = ((i32.mul (i32.add (i32.const 1) idx) (i32.const 4)))
+  heapLoc = ((i32.add &arr heapOffset))
+  return_ptr ((i32.load heapLoc))
+

@@ -10,8 +10,12 @@ class ASTNode
       # Strip underscores
       niceType = type[1...-1]
       # For ALLCAPS node names, only uppercase the first letter
+      # Also, replace underscores with capital letters
       if niceType == niceType.toUpperCase()
-        niceType = "#{niceType[0]}#{niceType[1..].toLowerCase()}"
+        splitType = niceType.split('_')
+        for word, i in splitType
+          splitType[i] = "#{word[0]}#{word[1..].toLowerCase()}"
+        niceType = splitType.join('')
       fnName = "is#{niceType}"
       if type == @name
         @[fnName] = -> true
@@ -22,6 +26,7 @@ class ASTNode
 NODE_TYPES = [
   '_Program_'
   '_Return_'
+  '_ReturnPtr_'
   '_If_'
   '_Else_'
   '_While_'
@@ -53,6 +58,7 @@ NODE_TYPES = [
   '_NUMBER_'
   '_BOOLEAN_'
   '_ID_'
+  '_ID_REF_'
   '_EMPTY_'
 ]
 
