@@ -119,6 +119,7 @@ GRAMMAR = {
     '_OpParenGroup_'
     '_Array_'
     '_ArrayRange_'
+    '_Object_'
     '_BOOLEAN_'
     '_VarOrFnCall_'
     '_String_'
@@ -167,6 +168,18 @@ GRAMMAR = {
     'LEFT_SQUARE expr{start} TWO_DOT _EMPTY_{end} RIGHT_SQUARE'
     'LEFT_SQUARE _EMPTY_{start} TWO_DOT expr{end} RIGHT_SQUARE'
     'LEFT_SQUARE _EMPTY_{start} TWO_DOT _EMPTY_{end} RIGHT_SQUARE'
+  ]
+
+  _Object_: [
+    'LEFT_CURLY objBody{props[]}'
+  ]
+  objBody: [
+    'WHITESPACE _ObjectProp_ (COMMA WHITESPACE _ObjectProp_)* WHITESPACE RIGHT_CURLY'
+    'INDENT NEWLINE _ObjectProp_ (NEWLINE _ObjectProp_)* UNINDENT NEWLINE RIGHT_CURLY'
+    'EMPTY WHITESPACE RIGHT_CURLY'
+  ]
+  _ObjectProp_: [
+    '_ID_{key} WHITESPACE COLON WHITESPACE expr{val}'
   ]
 
   _String_: [
@@ -244,6 +257,8 @@ GRAMMAR = {
   RIGHT_PAREN: '\\)'
   LEFT_SQUARE: '\\['
   RIGHT_SQUARE: '\\]'
+  LEFT_CURLY: '{'
+  RIGHT_CURLY: '}'
   LEFT_ANGLE: '<'
   RIGHT_ANGLE: '>'
   TWO_COLON: '::'

@@ -10,6 +10,7 @@ FORMS =
   CONCRETE: 'concrete'
   VARIABLE: 'variable'
   ARRAY: 'array'
+  OBJECT: 'object'
   FUNCTION: 'function'
 
 symbolTable = null
@@ -59,6 +60,13 @@ _genArrayType = ->
   return {
     form: FORMS.ARRAY
     item: _genVariableType()
+  }
+
+_genObjectType = ->
+  return {
+    form: FORMS.OBJECT
+    keys: []
+    props: {}
   }
 
 _genFunctionType = (arr) ->
@@ -216,14 +224,45 @@ _parseTypes = (astNode) ->
   if astNode.isArrayRange()
     return
 
+  if astNode.isObject()
+    symbol = symbolTable.getNodeSymbol(astNode)
+    type = _genObjectType()
+    for propNode in astNode.children.props
+      key = propNode.children.key.literal
+      propType = _parseTypes(propNode.children.val)
+      if key of type.props
+        console.error("Key #{key} redefined in object #{JSON.stringify(astNode)}")
+        process.exit(1)
+      type.props[key] = propType
+      type.keys.push(key)
+    type.keys.sort()
+    _setSymbolType(symbol, type)
+    return type
+
   if astNode.isArrayRef()
     arrType = _parseTypes(astNode.children.arr)
     refType = _parseTypes(astNode.children.ref)
+    if arrType.form != FORMS.ARRAY
+      console.error("Array ref should have array type: #{JSON.stringify(astNode.children.arr)}, #{arrType}")
+      process.exit(1)
     subst = _unifyTypes(refType, _genConcreteType(PRIMITIVES.I32))
     _applySubstEnv(subst)
     symbol = symbolTable.getNodeSymbol(astNode)
     _setSymbolType(symbol, arrType.item)
     return arrType.item
+
+  if astNode.isObjectRef()
+    objType = _parseTypes(astNode.children.obj)
+    ref = astNode.children.ref.literal
+    if objType.form != FORMS.OBJECT
+      console.error("Object ref should have object type: #{JSON.stringify(astNode.children.obj)}, #{objType}")
+      process.exit(1)
+    if ref not of objType.props
+      console.error("Object prop not defined: #{JSON.stringify(ref)}, #{objType}")
+      process.exit(1)
+    symbol = symbolTable.getNodeSymbol(astNode)
+    _setSymbolType(symbol, objType.props[ref])
+    return objType.props[ref]
 
   if astNode.isAssignment()
     target = astNode.children.target
@@ -430,6 +469,12 @@ _applySubstType = (type, subst) ->
     newType.var = type.var
   else if type.form == FORMS.ARRAY
     newType.item = _applySubstType(type.item, subst)
+  else if type.form == FORMS.OBJECT
+    newType.keys = []
+    newType.props = {}
+    for key in type.keys
+      newType.keys.push(key)
+      newType.props[key] = _applySubstType(type.props[key], subst)
   else if type.form == FORMS.FUNCTION
     newType.arr = []
     for subtype in type.arr
@@ -451,6 +496,11 @@ _typevarOccurs = (typevar, type) ->
     return typevar == type.var
   if type.form == FORMS.ARRAY
     return _typevarOccurs(typevar, type.item)
+  if type.form == FORMS.OBJECT
+    for key in type.keys
+      if _typevarOccurs(typevar, type.props[key])
+        return true
+    return false
   if type.form == FORMS.FUNCTION
     for subtype in type.arr
       if _typevarOccurs(typevar, subtype)
@@ -477,6 +527,10 @@ _bindTypeclasses = (typevar, type) ->
   if type.form == FORMS.ARRAY
     # Array typeclasses unimplemented for now
     console.error("Cannot bind typeclasses of #{typevar} with array type #{JSON.stringify(type)}")
+    process.exit(1)
+  else if type.form == FORMS.OBJECT
+    # Object typeclasses unimplemented for now
+    console.error("Cannot bind typeclasses of #{typevar} with object type #{JSON.stringify(type)}")
     process.exit(1)
   else if type.form == FORMS.FUNCTION
     # Higher-kinded typeclasses unimplemented for now
@@ -533,13 +587,25 @@ _unifyTypes = (t0, t1) ->
     return _bindVariableType(t1.var, t0)
   if t0.form == FORMS.ARRAY and t1.form == FORMS.ARRAY
     return _unifyTypes(t0.item, t1.item)
+  if t0.form == FORMS.OBJECT and t1.form == FORMS.OBJECT and t0.keys == t1.keys
+    if t0.keys.length == 0
+      return {}
+    key = t0.keys[0]
+    subst = _unifyTypes(t0.props[key], t1.props[key])
+    t0new = _applySubstType(t0, subst)
+    t1new = _applySubstType(t1, subst)
+    delete t0new.props[key]
+    delete t1new.props[key]
+    t0new.keys = t0new.keys[1..]
+    t1new.keys = t1new.keys[1..]
+    return _composeSubsts(_unifyTypes(t0new, t1new), subst)
   if t0.form == FORMS.FUNCTION and t1.form == FORMS.FUNCTION and t0.arr.length == t1.arr.length
     if t0.arr.length == 0
       return {}
     subst = _unifyTypes(t0.arr[0], t1.arr[0])
     t0new = _applySubstType(t0, subst)
-    t0new.arr = t0new.arr[1..]
     t1new = _applySubstType(t1, subst)
+    t0new.arr = t0new.arr[1..]
     t1new.arr = t1new.arr[1..]
     return _composeSubsts(_unifyTypes(t0new, t1new), subst)
   console.error("Failed to unify types: #{JSON.stringify(t0)}, #{JSON.stringify(t1)}")

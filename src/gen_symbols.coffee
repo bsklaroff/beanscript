@@ -27,9 +27,17 @@ _parseSymbols = (astNode) ->
     _parseSymbols(astNode.children.end)
     symbolTable.setAnonSymbol(astNode)
 
+  else if astNode.isObject()
+    _parseSymbols(astNode.children.props)
+    symbolTable.setAnonSymbol(astNode)
+
   else if astNode.isArrayRef()
     _parseSymbols(astNode.children.arr)
     _parseSymbols(astNode.children.ref)
+    symbolTable.setAnonSymbol(astNode)
+
+  else if astNode.isObjectRef()
+    _parseSymbols(astNode.children.obj)
     symbolTable.setAnonSymbol(astNode)
 
   else if astNode.isOpParenGroup()

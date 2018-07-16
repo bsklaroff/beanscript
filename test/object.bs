@@ -1,0 +1,30 @@
+cat = {x: 5, y: 10}
+horse = [-100, 99]
+abc = {
+  zebra: 23
+  cat: cat
+  horse: horse
+  samecat: cat
+  samehorse: horse
+}
+@print(abc.zebra)
+@print(abc.cat.x)
+@print(abc.cat.y)
+@print(abc.samecat.x)
+@print(abc.samecat.y)
+@print(abc.horse[0])
+@print(abc.horse[1])
+@print(abc.samehorse[0])
+@print(abc.samehorse[1])
+cat.x = 7
+horse[0] = -98
+abc.zebra = 47
+@print(abc.zebra)
+@print(abc.cat.x)
+@print(abc.cat.y)
+@print(abc.samecat.x)
+@print(abc.samecat.y)
+@print(abc.horse[0])
+@print(abc.horse[1])
+@print(abc.samehorse[0])
+@print(abc.samehorse[1])

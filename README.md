@@ -1,5 +1,11 @@
 # beanscript
 
+Beanscript is an imperative language with CoffeeScript-inspired syntax and
+Haskell-inspired static types -- full HM type inference plus typeclasses.
+It compiles to WebAssembly.
+
+This is a work in progress.
+
 ## How to run
 First, for wasm support, install [Node v8.x](https://nodejs.org)
 

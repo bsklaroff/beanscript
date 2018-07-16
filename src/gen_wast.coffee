@@ -228,6 +228,15 @@ _genSexprs = (astNode) ->
       heapOffset = ['i32.mul', ['i32.add', ['i32.const', 1], _unbox(refSymbol)], _getTypeSize(_genConcreteType(PRIMITIVES.I32))]
       heapLoc = ['i32.add', _get(arrSymbol), heapOffset]
       sexprs.push(['i32.store', heapLoc, _get(sourceSymbol)])
+    else if target.isObjectRef()
+      obj = target.children.obj
+      sexprs = sexprs.concat(_genSexprs(obj))
+      objSymbol = symbolTable.getNodeSymbol(obj)
+      objType = typeEnv[objSymbol].type
+      idx = objType.keys.indexOf(target.children.ref.literal)
+      heapOffset = ['i32.mul', ['i32.const', idx], _getTypeSize(_genConcreteType(PRIMITIVES.I32))]
+      heapLoc = ['i32.add', _get(objSymbol), heapOffset]
+      sexprs.push(['i32.store', heapLoc, _get(sourceSymbol)])
     else
       console.error("Assignment target must be variable or array ref, found #{JSON.stringify(target)}")
 
@@ -259,6 +268,18 @@ _genSexprs = (astNode) ->
 
   #TODO: astNode.isArrayRange
 
+  else if astNode.isObject()
+    propNodes = astNode.children.props
+    sexprs = sexprs.concat(_genSexprs(propNodes))
+    objSymbol = symbolTable.getNodeSymbol(astNode)
+    sexprs.push(_set(objSymbol, ['get_global', '$hp']))
+    for propNode in propNodes.sort((a, b) -> a.children.key.literal.localeCompare(b.children.key.literal))
+      valSymbol = symbolTable.getNodeSymbol(propNode.children.val)
+      sexprs = sexprs.concat(_addToHeap(_genConcreteType(PRIMITIVES.I32), _get(valSymbol)))
+
+  else if astNode.isObjectProp()
+    sexprs = sexprs.concat(_genSexprs(astNode.children.val))
+
   #TODO: ensure ref is within array bounds
   else if astNode.isArrayRef()
     arr = astNode.children.arr
@@ -269,6 +290,17 @@ _genSexprs = (astNode) ->
     refSymbol = symbolTable.getNodeSymbol(ref)
     heapOffset = ['i32.mul', ['i32.add', ['i32.const', 1], _unbox(refSymbol)], _getTypeSize(_genConcreteType(PRIMITIVES.I32))]
     heapLoc = ['i32.add', _get(arrSymbol), heapOffset]
+    symbol = symbolTable.getNodeSymbol(astNode)
+    sexprs.push(_set(symbol, ['i32.load', heapLoc]))
+
+  else if astNode.isObjectRef()
+    obj = astNode.children.obj
+    sexprs = sexprs.concat(_genSexprs(obj))
+    objSymbol = symbolTable.getNodeSymbol(obj)
+    objType = typeEnv[objSymbol].type
+    idx = objType.keys.indexOf(astNode.children.ref.literal)
+    heapOffset = ['i32.mul', ['i32.const', idx], _getTypeSize(_genConcreteType(PRIMITIVES.I32))]
+    heapLoc = ['i32.add', _get(objSymbol), heapOffset]
     symbol = symbolTable.getNodeSymbol(astNode)
     sexprs.push(_set(symbol, ['i32.load', heapLoc]))
 
