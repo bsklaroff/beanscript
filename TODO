@@ -1,11 +1,10 @@
-higher-order polymorphism, aka type constructors (e.g. arrays)
-object types, with inference
-- deal with object dot-access
+higher-order polymorphism, aka type constructors
+- perhaps work array and object types into larger framework
+implement strings
+implement number types other than i32
+- figure out defaulting / coercion
 add error handling with pretty error messages
-add tests
 add documentation
-fix _FunctionCall_ in grammar to remove parens around nested calls
-allow closures
 fix type inference issues
 - redefining fns means the final generalized type is not known until the last
   definition, so if we instantiate a fn before the last definition, the type
@@ -14,15 +13,19 @@ fix type inference issues
   reassigned inside a fn
 - deal with recursion. also, mutual recursion via global fns / closures / typeinsts
 fix typeclass issues
-- implement runtime overloading via dictionaries
+- fix issue with passing a function as an argument where we don't know how
+  many context typevars that function will need passed in
 - allow constructed types
 - allow contexts for typeinst headers
 - allow generalized fn defs inside typeclasses
+allow closures
+memory management
 
 LONG TERM IDEAS
 inline functions when possible
 interactive prompt
 functional language constructs built in (map, filter, reduce, etc)
+built in hashmap and hashset
 currying
 - a(_, 23, _) means curry with 23 as the second argument
 compose operator in prelude
