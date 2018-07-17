@@ -22,6 +22,8 @@ allow closures
 memory management
 
 LONG TERM IDEAS
+allow null values?
+- optional fn arguments
 inline functions when possible
 interactive prompt
 functional language constructs built in (map, filter, reduce, etc)

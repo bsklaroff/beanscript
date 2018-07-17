@@ -37,6 +37,9 @@ replaceOpsWithFnCalls = (astNode) ->
     if not astNode.children.lhs.isEmpty()
       resNode.children.args.push(astNode.children.lhs)
     resNode.children.args.push(astNode.children.rhs)
+  # If this node is an opParenGroup, replace it with its child
+  else if astNode.isOpParenGroup()
+    resNode = astNode.children.opExpr
   return resNode
 
 module.exports = replaceOpsWithFnCalls

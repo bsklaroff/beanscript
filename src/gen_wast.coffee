@@ -256,7 +256,13 @@ _genSexprs = (astNode) ->
     sexprs = sexprs.concat(_genSexprs(itemNodes))
     arrSymbol = symbolTable.getNodeSymbol(astNode)
     sexprs.push(_set(arrSymbol, ['get_global', '$hp']))
+    # Add num elements in array
     sexprs = sexprs.concat(_addToHeap(_genConcreteType(PRIMITIVES.I32), ['i32.const', itemNodes.length]))
+    # Add allocation size
+    sexprs = sexprs.concat(_addToHeap(_genConcreteType(PRIMITIVES.I32), ['i32.const', itemNodes.length]))
+    # Add pointer to start of array
+    sexprs = sexprs.concat(_addToHeap(_genConcreteType(PRIMITIVES.I32), ['i32.add', ['get_global', '$hp'], ['i32.const', 4]]))
+    # Push array elements onto heap
     for itemNode in itemNodes
       itemSymbol = symbolTable.getNodeSymbol(itemNode)
       sexprs = sexprs.concat(_addToHeap(_genConcreteType(PRIMITIVES.I32), _get(itemSymbol)))

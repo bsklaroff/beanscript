@@ -58,7 +58,7 @@ typeinst eq bool
   __neq__: (x, y) -> ((i32.ne x y))
 
 ###
-Array methods
+Array functions
 ###
 
 @len :: (arr<a>) -> i32
@@ -67,18 +67,51 @@ Array methods
 # TODO: check array bounds
 @__arr_set__ :: (arr<a>, i32, a) -> void
 @__arr_set__ = (arr, idx, val) ->
-  heapOffset :: i32
-  heapLoc :: i32
-  heapOffset = ((i32.mul (i32.add (i32.const 1) idx) (i32.const 4)))
-  heapLoc = ((i32.add &arr heapOffset))
-  ((i32.store heapLoc &val))
+  data_start = ((i32.load (i32.add &arr (i32.const 8))))
+  heap_loc = data_start + idx * 4
+  ((i32.store heap_loc &val))
 
 # TODO: check array bounds
 @__arr_get__ :: (arr<a>, i32) -> a
 @__arr_get__ = (arr, idx) ->
-  heapOffset :: i32
-  heapLoc :: i32
-  heapOffset = ((i32.mul (i32.add (i32.const 1) idx) (i32.const 4)))
-  heapLoc = ((i32.add &arr heapOffset))
-  return_ptr ((i32.load heapLoc))
+  data_start = ((i32.load (i32.add &arr (i32.const 8))))
+  heap_loc = data_start + idx * 4
+  return_ptr ((i32.load heap_loc))
+
+@push :: (arr<a>, a) -> void
+@push = (arr, val) ->
+  arr_len = @len(arr)
+  allocated = ((i32.load (i32.add &arr (i32.const 4))))
+  if arr_len == allocated
+    @_reallocate(arr)
+  new_arr_len = arr_len + 1
+  ((i32.store &arr new_arr_len))
+  data_start = ((i32.load (i32.add &arr (i32.const 8))))
+  heap_loc = data_start + (new_arr_len - 1) * 4
+  ((i32.store heap_loc &val))
+
+@_reallocate :: (arr<a>) -> void
+@_reallocate = (arr) ->
+  new_data_start = ((get_global $hp))
+  arr_len = @len(arr)
+  i = 0
+  while i < arr_len
+    val = arr[i]
+    new_heap_loc = new_data_start + i * 4
+    ((i32.store new_heap_loc &val))
+    i = i + 1
+  new_allocated = 2 * (arr_len + 1)
+  new_hp = new_data_start + new_allocated * 4
+  ((i32.store (i32.add &arr (i32.const 4)) new_allocated))
+  ((i32.store (i32.add &arr (i32.const 8)) new_data_start))
+  ((set_global $hp new_hp))
+
+@pop :: (arr<a>) -> a
+@pop = (arr) ->
+  arr_len = @len(arr)
+  new_arr_len = arr_len - 1
+  data_start = ((i32.load (i32.add &arr (i32.const 8))))
+  heap_loc = data_start + new_arr_len * 4
+  ((i32.store &arr new_arr_len))
+  return_ptr ((i32.load heap_loc))
 

@@ -40,10 +40,6 @@ _parseSymbols = (astNode) ->
     _parseSymbols(astNode.children.obj)
     symbolTable.setAnonSymbol(astNode)
 
-  else if astNode.isOpParenGroup()
-    _parseSymbols(astNode.children.opExpr)
-    symbolTable.setAnonSymbol(astNode)
-
   else if astNode.isVariable()
     varName = astNode.children.id.literal
     symbolTable.setNamedSymbol(astNode, varName)
