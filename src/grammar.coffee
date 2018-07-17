@@ -239,6 +239,7 @@ GRAMMAR = {
   ]
 
   _Comment_: [
+    'MULTILINE_COMMENT'
     'HASH NON_NEWLINE'
   ]
 
@@ -296,6 +297,7 @@ GRAMMAR = {
   _STRING_NO_DOUBLE_QUOTE_: '[^"]+'
   RIGHT_ARROW: '->'
   DOUBLE_RIGHT_ARROW: '=>'
+  MULTILINE_COMMENT: '###[\\s\\S]*?(?=###)###'
   HASH: '#'
   NON_PAREN: '[^()]*'
   NON_NEWLINE: '[^\n]*'

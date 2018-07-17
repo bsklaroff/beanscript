@@ -57,7 +57,9 @@ typeinst eq bool
   __eq__: (x, y) -> ((i32.eq x y))
   __neq__: (x, y) -> ((i32.ne x y))
 
-# Array methods
+###
+Array methods
+###
 
 @len :: (arr<a>) -> i32
 @len = (arr) -> ((i32.load &arr))
