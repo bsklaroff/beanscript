@@ -1,5 +1,19 @@
-higher-order polymorphism, aka type constructors
-- perhaps work array and object types into larger framework
+parse object type in type definitions
+- object type in typeclass specifies required keys
+  - implemented by copying key subsets of object args
+change to haskell syntax for type definitions
+type ytype = abc {a :: atype, b :: btype}
+- allow ytype k = abc {a :: k, b :: int}
+- allow options, e.g. type maybe a = null | some a
+  - case statements to unpack option types
+  - can also unpack in fn args
+  - this takes care of enums
+  - question marks unpack maybes?
+- allow recursive or mutually recursive types
+  - disallow recursive types without maybe based on unconstructability?
+typealias xtype = {a :: atype, b :: btype}
+- allow xtype k = {a :: k, b :: int}
+built in hashmap and hashset
 implement strings
 implement number types other than i32
 - figure out defaulting / coercion
@@ -15,56 +29,53 @@ fix type inference issues
 fix typeclass issues
 - fix issue with passing a function as an argument where we don't know how
   many context typevars that function will need passed in
-- allow constructed types
+- allow default fn defs inside typeclasses
+- allow typeclasses over type constructors
 - allow contexts for typeinst headers
-- allow generalized fn defs inside typeclasses
+- allow constructed types in typeinst headers
+implement these recommendations: https://www.microsoft.com/en-us/research/wp-content/uploads/1997/01/multi.pdf
+- including multi-parameter type classes with functional dependencies?
 allow closures
 memory management
 
 LONG TERM IDEAS
-allow null values?
-- optional fn arguments
-inline functions when possible
-interactive prompt
+alternative fn calling syntax: var.fn(arg) where var is passed as first arg of fn
 functional language constructs built in (map, filter, reduce, etc)
-built in hashmap and hashset
 currying
 - a(_, 23, _) means curry with 23 as the second argument
 compose operator in prelude
-user-defined object types
-- every possible property specified
-- properties optionally typed
-- properties required by default, ?:: marks them optional
-- type can be recursive
-user-defined non-object types
-- enums, with | syntax
-- type constructors (e.g. maybe<int>), basically enums with arguments
-- typeclasses acting on type constructors (e.g. monads)
+can we get rid of @ symbol?
+optional, named fn arguments
 by default, functions do not inherit parent scope
 - also by default, no argument object / array mutation inside functions ->
 - can be made a closure with =>
 - can allow mutation with ->>
 - or both with =>>
-'memoize' fn in prelude, operates only on functional functions
-- can specify if objects returned should be copies or references
+good namespacing / module system
+- allows specifying exported types / functions
+- maybe _ specifies module-private fn / data, or unmodifiable object field
+- automatic documentation that scrapes comments directly above fn defs
+compatible with js
+- package as npm module
+- can require js or bs as modules
+interactive prompt
+inline functions when possible
 promises built in
 - any function can be easily wrapped in a promise
 - cancelable
 - async / await or .then syntax?
-good namespacing / module system
-- allows specifying exported types / functions
-compatible with js
-- package as npm module
-- can require js or bs as modules
+immutable vars / fields?
+gadts?
+'memoize' fn in prelude, operates only on functional functions?
+- can specify if objects returned should be copies or references
 generalized ffi to easily incorporate c, python libs
+json config file (e.g. detect overflow, check array bounds) for debugging vs. performance
 super long-term: SIMD / GPU / FPGA support
 
 SYNTACTIC SUGAR??
 specify infix notation
 operator overloading
 macros
-- alternative lisp output / code syntax
-alternative OOP syntax where a Class translates to a module containing a type and fns
-alternative fn calling syntax: var.fn(arg) where var is passed as first arg of fn
+- alternative lisp output / code syntax?
 js-esque bracket-based version with bjs filename
 underscore_case pragma converts to camelCase behind the scenes
