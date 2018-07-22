@@ -155,27 +155,18 @@ _parseTypeContext = (contextNodes) ->
   return contextMap
 
 _parseTypeNode = (typeNode, typevarMap) ->
-  typeArr = typeNode.children.typeArr
-  # Check for primitive / typevar
-  if typeArr.length == 1
-    return _parseSingleType(typeArr[0], typevarMap)
-  # Check for fn type with no arguments
-  if typeArr[0].isEmpty()
-    typeArr = typeArr[1..]
-  resArr = []
-  for subtypeNode in typeArr
-    resArr.push(_parseTypeNode(subtypeNode, typevarMap))
-  return _genFunctionType(resArr)
+  if typeNode.isId()
+    return _parseIdType(typeNode, typevarMap)
+  if typeNode.isConstructedType()
+    return _parseConstructedType(typeNode, typevarMap)
+  if typeNode.isFunctionType()
+    return _parseFunctionType(typeNode, typevarMap)
+  console.error("Unknown type node #{JSON.stringify(typeNode)}")
+  process.exit(1)
+  return
 
-_parseSingleType = (nonFnTypeNode, typevarMap) ->
-  typeId = nonFnTypeNode.children.primitive.literal
-  paramNodes = nonFnTypeNode.children.params
-  # Check for constructed type
-  if paramNodes.length > 0
-    params = []
-    for paramNode in paramNodes
-      params.push(_parseTypeNode(paramNode, typevarMap))
-    return _genConstructedType(typeId, params)
+_parseIdType = (idTypeNode, typevarMap) ->
+  typeId = idTypeNode.literal
   if typeId in utils.values(PRIMITIVES)
     return _genConcreteType(typeId)
   if typeId of typevarMap
@@ -183,6 +174,23 @@ _parseSingleType = (nonFnTypeNode, typevarMap) ->
   newType = _genVariableType()
   typevarMap[typeId] = newType
   return newType
+
+_parseConstructedType = (constructedTypeNode, typevarMap) ->
+  typeId = constructedTypeNode.children.constructor.literal
+  paramTypes = []
+  for param in constructedTypeNode.children.params
+    paramTypes.push(_parseTypeNode(param, typevarMap))
+  return _genConstructedType(typeId, paramTypes)
+
+_parseFunctionType = (functionTypeNode, typevarMap) ->
+  argTypes = functionTypeNode.children.argTypes
+  # Check for fn type with no arguments
+  if argTypes[0].isEmpty()
+    argTypes = argTypes[1..]
+  resTypes = []
+  for argType in argTypes
+    resTypes.push(_parseTypeNode(argType, typevarMap))
+  return _genFunctionType(resTypes)
 
 ###
 Parse and infer all types

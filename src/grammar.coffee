@@ -37,21 +37,34 @@ GRAMMAR = {
   ]
 
   _TypeWithContext_: [
-    'typeContext{context[]} _Type_{type}'
+    'typeContext{context[]} type{type}'
   ]
   typeContext: [
     'LEFT_PAREN (_Typeclass_ (COMMA _Typeclass_)*) RIGHT_PAREN DOUBLE_RIGHT_ARROW'
     'EMPTY'
   ]
-  _Type_: [
-    '_NonFnType_{typeArr[]}'
-    '(LEFT_PAREN _Type_ (COMMA _Type_)* RIGHT_PAREN RIGHT_ARROW _Type_){typeArr[]}'
-    '(LEFT_PAREN _Empty_ RIGHT_PAREN RIGHT_ARROW _Type_){typeArr[]}'
-    '(_Empty_ RIGHT_ARROW _Type_){typeArr[]}'
+
+  type: [
+    '_FunctionType_'
+    '_ConstructedType_'
+    '_ID_'
   ]
-  _NonFnType_: [
-    '_ID_{primitive} LEFT_ANGLE (_Type_ (COMMA _Type_)*){params[]} RIGHT_ANGLE'
-    '_ID_{primitive} EMPTY{params[]}'
+  _FunctionType_: [
+    '(fnTypeInner RIGHT_ARROW fnTypeInner (RIGHT_ARROW fnTypeInner)*){argTypes[]}'
+    '(_Empty_ RIGHT_ARROW fnTypeInner){argTypes[]}'
+  ]
+  fnTypeInner: [
+    'LEFT_PAREN _FunctionType_ RIGHT_PAREN'
+    '_ConstructedType_'
+    '_ID_'
+  ]
+  _ConstructedType_: [
+    '_ID_{constructor} (constructedTypeInner constructedTypeInner*){params[]}'
+  ]
+  constructedTypeInner: [
+    'LEFT_PAREN _FunctionType_ RIGHT_PAREN'
+    'LEFT_PAREN _ConstructedType_ RIGHT_PAREN'
+    '_ID_'
   ]
 
   _Typeinst_: [

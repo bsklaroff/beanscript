@@ -1,7 +1,6 @@
 parse object type in type definitions
 - object type in typeclass specifies required keys
   - implemented by copying key subsets of object args
-change to haskell syntax for type definitions
 type ytype = abc {a :: atype, b :: btype}
 - allow ytype k = abc {a :: k, b :: int}
 - allow options, e.g. type maybe a = null | some a
