@@ -1,0 +1,12 @@
+a = ### multi
+line
+comment ###   ###
+###3 # single line
+
+# multiple
+# comments
+### one line multi line ###
+#
+
+#
+@print(a)

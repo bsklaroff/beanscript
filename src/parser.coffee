@@ -94,8 +94,8 @@ class Parser
     node = @history[@history.length - 1]
     {rule, parseIdx} = node
     if rule.isLiteral
-      # Ignore whitespace
-      parseIdx = @_parseWhitespace(parseIdx)
+      # Ignore whitespace and comments
+      parseIdx = @_parseWhitespaceAndComments(parseIdx)
       literalMatch = @inputStr[parseIdx..].match(new RegExp("^#{rule.regex}"))
       if not literalMatch?
         @_tokenNoMatch(node.parent, rule.name)
@@ -131,9 +131,33 @@ class Parser
       @history.push(@_makeHistoryNode(nextToken, node))
     return
 
+  # Parses any whitespace and comments
+  _parseWhitespaceAndComments: (parseIdx) ->
+    origIdx = null
+    while origIdx != parseIdx
+      origIdx = parseIdx
+      parseIdx = @_parseWhitespace(parseIdx)
+      parseIdx = @_parseMultiLineComment(parseIdx)
+    parseIdx = @_parseSingleLineComment(parseIdx)
+    return parseIdx
+
   # Parses whitespace, returns parseIdx after any whitespace
   _parseWhitespace: (parseIdx) ->
-    match = @inputStr[parseIdx..].match(new RegExp("^#{grammar.WHITESPACE.regex}"))
+    match = @inputStr[parseIdx..].match(new RegExp('^[ \t]*'))
+    if match?
+      return parseIdx + match[0].length
+    return parseIdx
+
+  # Parses single line comment
+  _parseSingleLineComment: (parseIdx) ->
+    match = @inputStr[parseIdx..].match(new RegExp('^#[^\n]*'))
+    if match?
+      return parseIdx + match[0].length
+    return parseIdx
+
+  # Parses multi line comment
+  _parseMultiLineComment: (parseIdx) ->
+    match = @inputStr[parseIdx..].match(new RegExp('^###[\\s\\S]*?(?=###)###'))
     if match?
       return parseIdx + match[0].length
     return parseIdx

@@ -15,7 +15,6 @@ GRAMMAR = {
     '_TypeclassDef_'
     '_Typeinst_'
     'expr'
-    '_Comment_'
     'EMPTY'
   ]
 
@@ -265,14 +264,8 @@ GRAMMAR = {
     'RIGHT_ARROW _EMPTY_ statement'
   ]
 
-  _Comment_: [
-    'MULTILINE_COMMENT'
-    'HASH NON_NEWLINE'
-  ]
-
   NEWLINE: '[ \t\n]*\n'
   _NEWLINE_: '[ \t\n]*\n'
-  WHITESPACE: '[ \t]*'
   ANY_SPACE: '[ \t\n]*'
   RETURN: 'return'
   RETURN_PTR: 'return_ptr'
@@ -324,10 +317,6 @@ GRAMMAR = {
   _STRING_NO_DOUBLE_QUOTE_: '[^"]+'
   RIGHT_ARROW: '->'
   DOUBLE_RIGHT_ARROW: '=>'
-  MULTILINE_COMMENT: '###[\\s\\S]*?(?=###)###'
-  HASH: '#'
-  NON_PAREN: '[^()]*'
-  NON_NEWLINE: '[^\n]*'
   INDENT: ''
   UNINDENT: ''
   _EMPTY_: ''
