@@ -1,0 +1,92 @@
+getx :: { x :: i32, y :: i32 } -> i32
+getx = (obj) -> obj.x
+
+gety :: abcdef -> { zootsmagoots :: i64,
+          f :: a } -> i32
+
+gety :: b -> c
+        -> {
+          xbad :: { z :: i32, y :: i64 }
+          zwlele :: a
+          y :: i32
+        } -> d -> e
+        -> f
+
+type map = map {
+    asdf :: i32
+    asdflkj :: bool
+  }
+
+type map = map { asdf :: i32
+                 asdflkj :: bool }
+
+type map = map
+  { asdf :: i32
+    asdflkj :: bool }
+
+type map = map
+  {
+    asdf :: i32
+    asdflkj :: bool
+  }
+
+type map =
+  map {
+    asdf :: i32
+    asdflkj :: bool
+  }
+
+type map =
+  map { asdf :: i32
+        asdflkj :: bool }
+
+type person a =
+  person (i32 -> i64)
+| really_long_name (
+    { xbc :: i32
+      zalala :: a
+      y :: i32
+    }
+    -> {
+      x :: i32
+      z :: a
+      y :: i32
+    }
+    -> i32someothertype
+    -> i64whatarewedoinghere
+  )
+| other_long_name (
+    { xbc :: i32
+      zalala :: a
+      y :: i32
+    } -> {
+      x :: i32
+      z :: a
+      y :: i32
+    } -> i32someothertype
+    -> i64whatarewedoinghere
+  )
+| null
+| aconst ({
+      x :: i32
+      z :: a
+      y :: i32
+    } -> some -> more -> args -> {
+      x :: i32
+      z :: a
+      y :: i32
+    } -> i32 -> i64
+  )
+| another { what :: i32 }
+| a { confusing :: i32
+      formatting :: i64 }
+
+
+gety = (obj) -> obj.y
+
+x_plus_y = (obj) -> obj.x + obj.y
+
+a = {x: 5, y: 10}
+@print(getx(a))
+@print(gety(a))
+@print(x_plus_y(a))

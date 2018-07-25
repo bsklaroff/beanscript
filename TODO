@@ -1,6 +1,4 @@
-parse object type in type definitions
-- object type in typeclass specifies required keys
-  - implemented by copying key subsets of object args
+make mid-line comments work
 type ytype = abc {a :: atype, b :: btype}
 - allow ytype k = abc {a :: k, b :: int}
 - allow options, e.g. type maybe a = null | some a
@@ -8,14 +6,20 @@ type ytype = abc {a :: atype, b :: btype}
   - can also unpack in fn args
   - this takes care of enums
   - question marks unpack maybes?
-- allow recursive or mutually recursive types
-  - disallow recursive types without maybe based on unconstructability?
 typealias xtype = {a :: atype, b :: btype}
 - allow xtype k = {a :: k, b :: int}
 built in hashmap and hashset
+object type in typeclass specifies required keys
+- allow parsing of object type in typeclass context
+- implement by copying key subsets of object args, or log(n) key lookup?
+- deal with generalization of fn obj properties
 implement strings
 implement number types other than i32
 - figure out defaulting / coercion
+- do we need monomorphism restriction?
+- multi-param typeclasses?
+fix parser bug where node's empty child array leads to undefined key
+disallow recursive types?
 add error handling with pretty error messages
 add documentation
 fix type inference issues

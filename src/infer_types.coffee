@@ -21,6 +21,7 @@ typeCount = null
 fnTypeclasses = null
 superclasses = null
 typeclassEnv = null
+objclassEnv = null
 typeEnv = null
 
 inferTypes = (rootNode, _symbolTable) ->
@@ -29,12 +30,13 @@ inferTypes = (rootNode, _symbolTable) ->
   fnTypeclasses = {}
   superclasses = {}
   typeclassEnv = {}
+  objclassEnv = {}
   typeEnv = {}
   _parseSupertypes(rootNode)
   _parseTypeDefs(rootNode)
   _parseTypes(rootNode)
   _addContextTypevars()
-  return {superclasses, typeclassEnv, typeEnv}
+  return {superclasses, typeclassEnv, objclassEnv, typeEnv}
 
 ###
 Type object generation functions
@@ -59,18 +61,18 @@ _genVariableType = ->
     var: "$t#{typeCount}"
   }
 
+_genObjectType = (props) ->
+  return {
+    form: FORMS.OBJECT
+    keys: Object.keys(props).sort()
+    props: props
+  }
+
 _genConstructedType = (name, params) ->
   return {
     form: FORMS.CONSTRUCTED
     name: name
     params: params
-  }
-
-_genObjectType = ->
-  return {
-    form: FORMS.OBJECT
-    keys: []
-    props: {}
   }
 
 _genFunctionType = (arr) ->
@@ -157,6 +159,8 @@ _parseTypeContext = (contextNodes) ->
 _parseTypeNode = (typeNode, typevarMap) ->
   if typeNode.isId()
     return _parseIdType(typeNode, typevarMap)
+  if typeNode.isObjectType()
+    return _parseObjectType(typeNode, typevarMap)
   if typeNode.isConstructedType()
     return _parseConstructedType(typeNode, typevarMap)
   if typeNode.isFunctionType()
@@ -174,6 +178,14 @@ _parseIdType = (idTypeNode, typevarMap) ->
   newType = _genVariableType()
   typevarMap[typeId] = newType
   return newType
+
+_parseObjectType = (objectTypeNode, typevarMap) ->
+  props = {}
+  for propNode in objectTypeNode.children.props
+    key = propNode.children.key.literal
+    typeNode = propNode.children.val
+    props[key] = _parseTypeNode(typeNode, typevarMap)
+  return _genObjectType(props)
 
 _parseConstructedType = (constructedTypeNode, typevarMap) ->
   typeId = constructedTypeNode.children.constructor.literal
@@ -244,31 +256,37 @@ _parseTypes = (astNode) ->
 
   if astNode.isObject()
     symbol = symbolTable.getNodeSymbol(astNode)
-    type = _genObjectType()
+    props = {}
     for propNode in astNode.children.props
       key = propNode.children.key.literal
       propType = _parseTypes(propNode.children.val)
-      if key of type.props
+      if key of props
         console.error("Key #{key} redefined in object #{JSON.stringify(astNode)}")
         process.exit(1)
-      type.props[key] = propType
-      type.keys.push(key)
-    type.keys.sort()
+      props[key] = propType
+    type = _genObjectType(props)
     _setSymbolType(symbol, type)
     return type
 
   if astNode.isObjectRef()
-    objType = _parseTypes(astNode.children.obj)
+    # Generate dummy newProps with ref mapped to a new vartype
     ref = astNode.children.ref.literal
-    if objType.form != FORMS.OBJECT
-      console.error("Object ref should have object type: #{JSON.stringify(astNode.children.obj)}, #{objType}")
-      process.exit(1)
-    if ref not of objType.props
-      console.error("Object prop not defined: #{JSON.stringify(ref)}, #{objType}")
-      process.exit(1)
+    newProps = {}
+    newProps[ref] = _genVariableType()
+    newType = _genVariableType()
+    objclassEnv[newType.var] = newProps
+    # Unify newType with objType to transfer newType's objclass to objType.
+    # This also unifies newType with any previous type or typeclass constraint
+    # defined for objType[ref]
+    obj = astNode.children.obj
+    objType = _parseTypes(astNode.children.obj)
+    subst = _unifyTypes(newType, objType)
+    delete objclassEnv[newType.var]
+    _applySubstEnv(subst)
+    newProps[ref] = _applySubstType(newProps[ref], subst)
     symbol = symbolTable.getNodeSymbol(astNode)
-    _setSymbolType(symbol, objType.props[ref])
-    return objType.props[ref]
+    _setSymbolType(symbol, newProps[ref])
+    return newProps[ref]
 
   if astNode.isAssignment()
     target = astNode.children.target
@@ -412,6 +430,11 @@ _ftvOfType = (type) ->
   ftv = {}
   if type.form == FORMS.VARIABLE
     ftv[type.var] = true
+  else if type.form == FORMS.OBJECT
+    for key in type.keys
+      subFtv = _ftvOfType(type.props[key])
+      for k of subFtv
+        ftv[k] = true
   else if type.form == FORMS.CONSTRUCTED
     for subtype in type.params
       subFtv = _ftvOfType(subtype)
@@ -431,6 +454,8 @@ _instantiateScheme = (scheme) ->
     subst[typevar] = newTypevar
     if typevar of typeclassEnv
       typeclassEnv[newTypevar.var] = utils.cloneDeep(typeclassEnv[typevar])
+    if typevar of objclassEnv
+      objclassEnv[newTypevar.var] = utils.cloneDeep(objclassEnv[typevar])
   return _applySubstType(scheme.type, subst)
 
 _instantiateSubstScheme = (scheme, substTypevar, substType) ->
@@ -471,6 +496,9 @@ _assignSymbolType = (symbol, type) ->
 _applySubstEnv = (subst) ->
   for k, v of typeEnv
     typeEnv[k] = _applySubstScheme(v, subst)
+  for tv of objclassEnv
+    for k, v of objclassEnv[tv]
+      objclassEnv[tv][k] = _applySubstType(v, subst)
   return
 
 _applySubstScheme = (scheme, subst) ->
@@ -489,17 +517,17 @@ _applySubstType = (type, subst) ->
     if type.var of subst
       return subst[type.var]
     newType.var = type.var
-  else if type.form == FORMS.CONSTRUCTED
-    newType.name = type.name
-    newType.params = []
-    for param in type.params
-      newType.params.push(_applySubstType(param, subst))
   else if type.form == FORMS.OBJECT
     newType.keys = []
     newType.props = {}
     for key in type.keys
       newType.keys.push(key)
       newType.props[key] = _applySubstType(type.props[key], subst)
+  else if type.form == FORMS.CONSTRUCTED
+    newType.name = type.name
+    newType.params = []
+    for param in type.params
+      newType.params.push(_applySubstType(param, subst))
   else if type.form == FORMS.FUNCTION
     newType.arr = []
     for subtype in type.arr
@@ -519,14 +547,14 @@ _typevarOccurs = (typevar, type) ->
     return false
   if type.form == FORMS.VARIABLE
     return typevar == type.var
-  if type.form == FORMS.CONSTRUCTED
-    for param in type.params
-      if _typevarOccurs(typevar, param)
-        return true
-    return false
   if type.form == FORMS.OBJECT
     for key in type.keys
       if _typevarOccurs(typevar, type.props[key])
+        return true
+    return false
+  if type.form == FORMS.CONSTRUCTED
+    for param in type.params
+      if _typevarOccurs(typevar, param)
         return true
     return false
   if type.form == FORMS.FUNCTION
@@ -546,32 +574,57 @@ _bindVariableType = (typevar, type) ->
     process.eixt(1)
   res = {}
   res[typevar] = type
-  _bindTypeclasses(typevar, type)
-  return res
+  tcRes = _bindTypeclasses(typevar, type)
+  return _composeSubsts(res, tcRes)
 
 _bindTypeclasses = (typevar, type) ->
-  if typevar not of typeclassEnv
-    return
+  if typevar not of typeclassEnv and typevar not of objclassEnv
+    return {}
+  if typevar of typeclassEnv and typevar of objclassEnv
+    console.error("Typevar #{typevar} cannot exist in both typeclassEnv and objclassEnv")
+    process.exit(1)
   if type.form == FORMS.CONSTRUCTED
     # Constructed typeclasses unimplemented for now
     console.error("Cannot bind typeclasses of #{typevar} with constructed type #{JSON.stringify(type)}")
-    process.exit(1)
-  else if type.form == FORMS.OBJECT
-    # Object typeclasses unimplemented for now
-    console.error("Cannot bind typeclasses of #{typevar} with object type #{JSON.stringify(type)}")
     process.exit(1)
   else if type.form == FORMS.FUNCTION
     # Higher-kinded typeclasses unimplemented for now
     console.error("Cannot bind typeclasses of #{typevar} with function type #{JSON.stringify(type)}")
     process.exit(1)
+  else if type.form == FORMS.OBJECT
+    if typevar of typeclassEnv
+      console.error("Object type #{type.name} cannot have typeclasses: #{typeclassEnv[typevar]}")
+      process.exit(1)
+    res = {}
+    for k, v of objclassEnv[typevar]
+      if k not of type.props
+        console.error("Objclass key #{k} not found in object type #{JSON.stringify(type)}")
+        process.exit(1)
+      res = _composeSubsts(_unifyTypes(v, type.props[k]), res)
+    return res
   else if type.form == FORMS.CONCRETE
+    if typevar of objclassEnv
+      console.error("Type #{type.name} cannot have objclasses: #{objclassEnv[typevar]}")
+      process.exit(1)
     for typeclass of typeclassEnv[typevar]
       if not _isSuperclass(typeclass, type.name)
         console.error("Type #{type.name} is not an instance of #{typeclass}")
         process.exit(1)
   else if type.form == FORMS.VARIABLE
+    if typevar of objclassEnv
+      return _unifyObjclasses(typevar, type.var)
     _unifyTypeclasses(typevar, type.var)
-  return
+  return {}
+
+_unifyObjclasses = (source, target) ->
+  objclassEnv[target] ?= {}
+  res = {}
+  for k, v of objclassEnv[source]
+    if k not of objclassEnv[target]
+      objclassEnv[target][k] = v
+    else
+      res = _composeSubsts(_unifyTypes(v, objclassEnv[target][k]), res)
+  return res
 
 _unifyTypeclasses = (source, target) ->
   typeclassEnv[target] ?= {}
@@ -613,16 +666,7 @@ _unifyTypes = (t0, t1) ->
     return _bindVariableType(t0.var, t1)
   if t1.form == FORMS.VARIABLE
     return _bindVariableType(t1.var, t0)
-  if t0.form == FORMS.CONSTRUCTED and t1.form == FORMS.CONSTRUCTED and t0.params.length == t1.params.length
-    if t0.params.length == 0
-      return {}
-    subst = _unifyTypes(t0.params[0], t1.params[0])
-    t0new = _applySubstType(t0, subst)
-    t1new = _applySubstType(t1, subst)
-    t0new.params = t0new.params[1..]
-    t1new.params = t1new.params[1..]
-    return _composeSubsts(_unifyTypes(t0new, t1new), subst)
-  if t0.form == FORMS.OBJECT and t1.form == FORMS.OBJECT and t0.keys == t1.keys
+  if t0.form == FORMS.OBJECT and t1.form == FORMS.OBJECT and utils.equals(t0.keys, t1.keys)
     if t0.keys.length == 0
       return {}
     key = t0.keys[0]
@@ -633,6 +677,15 @@ _unifyTypes = (t0, t1) ->
     delete t1new.props[key]
     t0new.keys = t0new.keys[1..]
     t1new.keys = t1new.keys[1..]
+    return _composeSubsts(_unifyTypes(t0new, t1new), subst)
+  if t0.form == FORMS.CONSTRUCTED and t1.form == FORMS.CONSTRUCTED and t0.params.length == t1.params.length
+    if t0.params.length == 0
+      return {}
+    subst = _unifyTypes(t0.params[0], t1.params[0])
+    t0new = _applySubstType(t0, subst)
+    t1new = _applySubstType(t1, subst)
+    t0new.params = t0new.params[1..]
+    t1new.params = t1new.params[1..]
     return _composeSubsts(_unifyTypes(t0new, t1new), subst)
   if t0.form == FORMS.FUNCTION and t1.form == FORMS.FUNCTION and t0.arr.length == t1.arr.length
     if t0.arr.length == 0

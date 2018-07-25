@@ -27,11 +27,10 @@ TYPE_INDICES =
 
 symbolTable = null
 typeEnv = null
-typeclassEnv = null
 
 genWast = (rootNode, _symbolTable, typeInfo) ->
   symbolTable = _symbolTable
-  {typeEnv, typeclassEnv} = typeInfo
+  {typeEnv} = typeInfo
   # Parse typeinsts to map typeclass fns to fn defs
   fnDefs = []
   typeclassFns = _getTypeclassFns(rootNode)

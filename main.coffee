@@ -4,10 +4,11 @@ utils = require('./src/utils')
 
 usageMessage = '''
 Usage: coffee main.coffee [OPTIONS] FILE
-Options (cannot be combined):
+Options:
   -a      Output astTree
   -s      Output symbol table
   -t      Output inferred types
+  -x      Ignore prelude
 '''
 
 _execArgs = (args) ->
@@ -28,7 +29,9 @@ _execArgs = (args) ->
     inferTypes = require('./src/infer_types')
     genWast = require('./src/gen_wast')
 
-    prelude = fs.readFileSync("#{__dirname}/src/prelude.bs").toString()
+    prelude = ''
+    if 'x' not in args.flags
+      prelude = fs.readFileSync("#{__dirname}/src/prelude.bs").toString()
     inputStr = fs.readFileSync(args.filename).toString()
 
     parser = new Parser()

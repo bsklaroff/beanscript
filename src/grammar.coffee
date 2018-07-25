@@ -47,15 +47,17 @@ GRAMMAR = {
   type: [
     '_FunctionType_'
     '_ConstructedType_'
+    '_ObjectType_'
     '_ID_'
   ]
   _FunctionType_: [
     '(fnTypeInner RIGHT_ARROW fnTypeInner (RIGHT_ARROW fnTypeInner)*){argTypes[]}'
-    '(_Empty_ RIGHT_ARROW fnTypeInner){argTypes[]}'
+    '(_EMPTY_ RIGHT_ARROW fnTypeInner){argTypes[]}'
   ]
   fnTypeInner: [
     'LEFT_PAREN _FunctionType_ RIGHT_PAREN'
     '_ConstructedType_'
+    '_ObjectType_'
     '_ID_'
   ]
   _ConstructedType_: [
@@ -64,7 +66,19 @@ GRAMMAR = {
   constructedTypeInner: [
     'LEFT_PAREN _FunctionType_ RIGHT_PAREN'
     'LEFT_PAREN _ConstructedType_ RIGHT_PAREN'
+    '_ObjectType_'
     '_ID_'
+  ]
+  _ObjectType_: [
+    'LEFT_CURLY objTypeBody{props[]}'
+  ]
+  objTypeBody: [
+    '_ObjTypeProp_ (COMMA _ObjTypeProp_)* RIGHT_CURLY'
+    'INDENT NEWLINE _ObjTypeProp_ (NEWLINE _ObjTypeProp_)* UNINDENT NEWLINE RIGHT_CURLY'
+    'EMPTY RIGHT_CURLY'
+  ]
+  _ObjTypeProp_: [
+    '_ID_{key} TWO_COLON type{val}'
   ]
 
   _Typeinst_: [
@@ -191,12 +205,12 @@ GRAMMAR = {
     'LEFT_CURLY objBody{props[]}'
   ]
   objBody: [
-    'WHITESPACE _ObjectProp_ (COMMA WHITESPACE _ObjectProp_)* WHITESPACE RIGHT_CURLY'
+    '_ObjectProp_ (COMMA _ObjectProp_)* RIGHT_CURLY'
     'INDENT NEWLINE _ObjectProp_ (NEWLINE _ObjectProp_)* UNINDENT NEWLINE RIGHT_CURLY'
-    'EMPTY WHITESPACE RIGHT_CURLY'
+    'EMPTY RIGHT_CURLY'
   ]
   _ObjectProp_: [
-    '_ID_{key} WHITESPACE COLON WHITESPACE expr{val}'
+    '_ID_{key} COLON expr{val}'
   ]
 
   _String_: [
