@@ -6,49 +6,27 @@ GRAMMAR = {
     'statement (NEWLINE statement)*'
   ]
   statement: [
+    '_Type_'
+    '_Typealias_'
+    '_TypeclassDef_'
+    '_Typeinst_'
     '_ReturnPtr_'
     '_Return_'
     '_If_'
     '_While_'
-    '_Assignment_'
     '_TypeDef_'
-    '_TypeclassDef_'
-    '_Typeinst_'
+    '_Assignment_'
     'expr'
     'EMPTY'
   ]
 
-  _TypeclassDef_: [
-    'TYPECLASS _Typeclass_{typeclass} maybeSuperclasses{superclasses[]} INDENT NEWLINE typeDefs{body[]} UNINDENT'
-  ]
-  maybeSuperclasses: [
-    'LTE LEFT_PAREN _ID_ (COMMA _ID_)* RIGHT_PAREN'
-    'EMPTY'
-  ]
-  _Typeclass_: [
-    '_ID_{class} _ID_{anonType}'
-  ]
-  typeDefs: [
-    '_TypeDef_ (NEWLINE _TypeDef_)*'
-  ]
-  _TypeDef_: [
-    '_ID_{name} TWO_COLON _TypeWithContext_{type}'
-  ]
-
-  _TypeWithContext_: [
-    'typeContext{context[]} type{type}'
-  ]
-  typeContext: [
-    'LEFT_PAREN (_Typeclass_ (COMMA _Typeclass_)*) RIGHT_PAREN DOUBLE_RIGHT_ARROW'
-    'EMPTY'
-  ]
-
-  type: [
+  anytype: [
     '_FunctionType_'
     '_ConstructedType_'
     '_ObjectType_'
     '_ID_'
   ]
+
   _FunctionType_: [
     '(fnTypeInner RIGHT_ARROW fnTypeInner (RIGHT_ARROW fnTypeInner)*){argTypes[]}'
     '(_EMPTY_ RIGHT_ARROW fnTypeInner){argTypes[]}'
@@ -59,6 +37,7 @@ GRAMMAR = {
     '_ObjectType_'
     '_ID_'
   ]
+
   _ConstructedType_: [
     '_ID_{constructor} (constructedTypeInner constructedTypeInner*){params[]}'
   ]
@@ -68,6 +47,7 @@ GRAMMAR = {
     '_ObjectType_'
     '_ID_'
   ]
+
   _ObjectType_: [
     'LEFT_CURLY objTypeBody{props[]}'
   ]
@@ -77,7 +57,30 @@ GRAMMAR = {
     'EMPTY RIGHT_CURLY'
   ]
   _ObjTypeProp_: [
-    '_ID_{key} TWO_COLON type{val}'
+    '_ID_{key} TWO_COLON anytype{val}'
+  ]
+
+  _Type_: [
+    'TYPE _ID_{name} _ID_*{params} EQUALS (_TypeOpt_ (VBAR _TypeOpt_)*){options}'
+  ]
+  _TypeOpt_: [
+    '_ID_{constructor} constructedTypeInner{param}'
+    '_ID_{constructor} _EMPTY_{param}'
+  ]
+
+  _Typealias_: [
+    'TYPEALIAS _ID_{name} _ID_*{params} EQUALS anytype{type}'
+  ]
+
+  _TypeclassDef_: [
+    'TYPECLASS _Typeclass_{typeclass} maybeSuperclasses{superclasses[]} INDENT NEWLINE typeDefs{body[]} UNINDENT'
+  ]
+  maybeSuperclasses: [
+    'LTE LEFT_PAREN _ID_ (COMMA _ID_)* RIGHT_PAREN'
+    'EMPTY'
+  ]
+  typeDefs: [
+    '_TypeDef_ (NEWLINE _TypeDef_)*'
   ]
 
   _Typeinst_: [
@@ -90,11 +93,11 @@ GRAMMAR = {
     '_ID_{fnName} COLON _FunctionDef_{fnDef}'
   ]
 
-  _Return_: [
-    'RETURN fnDefOrExpr{returnVal}'
-  ]
   _ReturnPtr_: [
     'RETURN_PTR fnDefOrExpr{returnVal}'
+  ]
+  _Return_: [
+    'RETURN fnDefOrExpr{returnVal}'
   ]
 
   _If_: [
@@ -111,6 +114,20 @@ GRAMMAR = {
 
   _While_: [
     'WHILE expr{condition} INDENT NEWLINE statements{body[]} UNINDENT'
+  ]
+
+  _TypeDef_: [
+    '_ID_{name} TWO_COLON _TypeWithContext_{type}'
+  ]
+  _TypeWithContext_: [
+    'typeContext{context[]} anytype{type}'
+  ]
+  typeContext: [
+    'LEFT_PAREN (_Typeclass_ (COMMA _Typeclass_)*) RIGHT_PAREN DOUBLE_RIGHT_ARROW'
+    'EMPTY'
+  ]
+  _Typeclass_: [
+    '_ID_{class} _ID_{anonType}'
   ]
 
   _Assignment_: [
@@ -267,13 +284,15 @@ GRAMMAR = {
   NEWLINE: '[ \t\n]*\n'
   _NEWLINE_: '[ \t\n]*\n'
   ANY_SPACE: '[ \t\n]*'
-  RETURN: 'return'
-  RETURN_PTR: 'return_ptr'
-  IF: 'if'
-  WHILE: 'while'
+  TYPE: 'type '
+  TYPEALIAS: 'typealias '
+  TYPECLASS: 'typeclass '
+  TYPEINST: 'typeinst '
+  RETURN_PTR: 'return_ptr '
+  RETURN: 'return '
+  IF: 'if '
+  WHILE: 'while '
   ELSE: 'else'
-  TYPECLASS: 'typeclass'
-  TYPEINST: 'typeinst'
   EQUALS: '='
   DOT: '\\.'
   COLON: ':'
@@ -289,6 +308,7 @@ GRAMMAR = {
   RIGHT_CURLY: '}'
   LEFT_ANGLE: '<'
   RIGHT_ANGLE: '>'
+  VBAR: '\\|'
   TWO_COLON: '::'
   TWO_DOT: '\\.\\.'
   COMMA: ','

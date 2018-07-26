@@ -1,3 +1,5 @@
+type maybe a = null | just a
+
 typeclass show a
   print :: a -> void
 

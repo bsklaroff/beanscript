@@ -17,8 +17,9 @@ implement number types other than i32
 - figure out defaulting / coercion
 - do we need monomorphism restriction?
 - multi-param typeclasses?
-fix parser bug where node's empty child array leads to undefined key
 disallow recursive types?
+add a lexer to keep ids from running together
+fix parser bug where node's empty child array leads to undefined key
 add error handling with pretty error messages
 add documentation
 fix type inference issues
