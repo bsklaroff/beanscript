@@ -1,9 +1,0 @@
-bop = (a :: i64) ->
-  stuff :: arr<arr<i64>> = []
-  inner :: arr<i64> = []
-  inner[a] = 3
-  stuff[a] = inner
-  print(stuff[a])
-  return stuff
-
-bop(4)
