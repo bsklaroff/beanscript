@@ -4,7 +4,7 @@ getx = (obj) -> obj.x
 gety :: { x :: a, y :: b } -> b
 gety = (obj) -> obj.y
 
-x_plus_y :: (num a) => { x :: a, y :: a } -> a
+x_plus_y :: (Num a) => { x :: a, y :: a } -> a
 x_plus_y = (obj) -> getx(obj) + gety(obj)
 
 a = {x: 5, y: 10}

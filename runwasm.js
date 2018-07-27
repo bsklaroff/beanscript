@@ -13,25 +13,25 @@ const buffer = toUint8Array(fs.readFileSync(filename))
 var memoryImport = new WebAssembly.Memory({initial: 1})
 
 TYPES = {
-  0: 'i32',
-  1: 'i64',
-  2: 'bool'
+  0: 'I32',
+  1: 'I64',
+  2: 'Bool'
 }
 
 function printMemory(type) {
-  if (TYPES[type] == 'i32') {
+  if (TYPES[type] == 'I32') {
     memory = new Int32Array(memoryImport.buffer)
     console.log(memory[0])
-  } else if (TYPES[type] == 'i64') {
+  } else if (TYPES[type] == 'I64') {
     //TODO: implement this
     memory = new Int32Array(memoryImport.buffer)
     console.log(memory[0])
-  } else if (TYPES[type] == 'bool') {
+  } else if (TYPES[type] == 'Bool') {
     memory = new Uint8Array(memoryImport.buffer)
     if (memory[0] == 1) {
-      console.log('true')
+      console.log('True')
     } else {
-      console.log('false')
+      console.log('False')
     }
   }
 }

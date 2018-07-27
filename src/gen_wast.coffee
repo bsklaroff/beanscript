@@ -2,13 +2,13 @@ fs = require('fs')
 utils = require('./utils')
 
 PRIMITIVES =
-  I32: 'i32'
-  I64: 'i64'
-  BOOL: 'bool'
-  VOID: 'void'
+  I32: 'I32'
+  I64: 'I64'
+  BOOL: 'Bool'
+  VOID: 'Void'
 
 CONSTRUCTORS =
-  ARR: 'arr'
+  ARR: 'Arr'
 
 FORMS =
   CONCRETE: 'concrete'
@@ -19,11 +19,10 @@ FORMS =
 
 TYPE_INDICES =
   function: 0
-  array: 1
-  void: 2
-  i32: 3
-  i64: 4
-  bool: 5
+  Void: 1
+  I32: 2
+  I64: 3
+  Bool: 4
 
 symbolTable = null
 typeEnv = null
@@ -330,7 +329,7 @@ _genSexprs = (astNode) ->
 
   else if astNode.isBoolean()
     symbol = symbolTable.getNodeSymbol(astNode)
-    literal = if astNode.literal == 'true' then 1 else 0
+    literal = if astNode.literal == 'True' then 1 else 0
     sexprs = sexprs.concat(_setHeapVar(symbol, ['i32.const', literal]))
 
   else if astNode.isWast()
@@ -392,9 +391,9 @@ _findContextTypevar = (typevar, typeArr, argAndReturnSymbols) ->
       else if targetType.form == FORMS.VARIABLE and targetType.var not in targetScheme.forall
         # We found a typevar arg from the enclosing function, return it
         return _getTypeIndex(targetType)
-      else if targetType.form == FORMS.ARRAY
-        # Array types cannot be typeclassed for now
-        console.error('Array type cannot be passed as a context typevar')
+      else if targetType.form == FORMS.CONSTRUCTED
+        # Constructed types cannot be typeclassed for now
+        console.error('Constructed type cannot be passed as a context typevar')
         process.exit(1)
       else if targetType.form == FORMS.FUNCTION
         # Function types cannot be typeclassed for now
@@ -426,10 +425,10 @@ _getStoreFn = (type) ->
   return
 
 _getTypeSize = (type) ->
-  if type.form not in [FORMS.CONCRETE, FORMS.ARRAY]
+  if type.form != FORMS.CONCRETE
     console.error("Could not get type size for non-concrete type: #{JSON.stringify(type)}")
     process.exit(1)
-  if type.form == FORMS.ARRAY or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+  if type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
     return ['i32.const', '4']
   else if type.name == PRIMITIVES.I64
     return ['i32.const', '8']
@@ -438,7 +437,7 @@ _getTypeSize = (type) ->
   return
 
 _getTypeIndex = (type) ->
-  if type.form in [FORMS.FUNCTION, FORMS.ARRAY]
+  if type.form == FORMS.FUNCTION
     return ['i32.const', TYPE_INDICES[type.form]]
   else if type.form == FORMS.CONCRETE
     return ['i32.const', TYPE_INDICES[type.name]]

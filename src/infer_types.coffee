@@ -1,13 +1,13 @@
 utils = require('./utils')
 
 PRIMITIVES =
-  I32: 'i32'
-  I64: 'i64'
-  BOOL: 'bool'
-  VOID: 'void'
+  I32: 'I32'
+  I64: 'I64'
+  BOOL: 'Bool'
+  VOID: 'Void'
 
 CONSTRUCTORS =
-  ARR: 'arr'
+  ARR: 'Arr'
 
 FORMS =
   CONCRETE: 'concrete'
