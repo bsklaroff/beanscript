@@ -159,21 +159,6 @@ GRAMMAR = {
     '_EMPTY_{lhs} _NOT_{op} expr{rhs}'
     '_EMPTY_{lhs} _NEG_{op} expr{rhs}'
   ]
-  _OpParenGroup_: [
-    'LEFT_PAREN _OpExpression_{opExpr} RIGHT_PAREN'
-  ]
-  nonOpExpr: [
-    '_OpParenGroup_'
-    '_Array_'
-    '_ArrayRange_'
-    '_Object_'
-    '_BOOLEAN_'
-    '_VarOrFnCall_'
-    '_String_'
-    '_Wast_'
-    '_NUMBER_'
-  ]
-
   op: [
     '_EXPONENT_'
     '_MOD_'
@@ -191,20 +176,22 @@ GRAMMAR = {
     '_OR_'
   ]
 
-  _VarOrFnCall_: [
-    '_Variable_{base} varExtOrArgList*{exts[]}'
-    'LEFT_PAREN _FunctionDef_{base} RIGHT_PAREN (_ArgList_ varExtOrArgList*){exts[]}'
+  nonOpExpr: [
+    '_OpParenGroup_'
+    '_Array_'
+    '_ArrayRange_'
+    '_Object_'
+    '_BOOLEAN_'
+    '_Constructed_'
+    '_Destruction_'
+    '_VarOrFnCall_'
+    '_String_'
+    '_Wast_'
+    '_NUMBER_'
   ]
-  varExtOrArgList: [
-    'varExt'
-    '_ArgList_'
-  ]
-  _ArgList_: [
-    'LEFT_PAREN argListInner{args[]} RIGHT_PAREN'
-  ]
-  argListInner: [
-    'fnDefOrExpr (COMMA fnDefOrExpr)*'
-    'EMPTY'
+
+  _OpParenGroup_: [
+    'LEFT_PAREN _OpExpression_{opExpr} RIGHT_PAREN'
   ]
 
   _Array_: [
@@ -227,6 +214,32 @@ GRAMMAR = {
   ]
   _ObjectProp_: [
     '_ID_{key} COLON expr{val}'
+  ]
+
+  _VarOrFnCall_: [
+    '_Variable_{base} varExtOrArgList*{exts[]}'
+    'LEFT_PAREN _FunctionDef_{base} RIGHT_PAREN (_ArgList_ varExtOrArgList*){exts[]}'
+  ]
+  varExtOrArgList: [
+    'varExt'
+    '_ArgList_'
+  ]
+  _ArgList_: [
+    'LEFT_PAREN argListInner{args[]} RIGHT_PAREN'
+  ]
+  argListInner: [
+    'fnDefOrExpr (COMMA fnDefOrExpr)*'
+    'EMPTY'
+  ]
+
+  _Constructed_: [
+    '_ID_{constructor} SPACE LEFT_PAREN _Constructed_{param} RIGHT_PAREN'
+    '_ID_{constructor} SPACE nonOpExpr{param}'
+  ]
+
+  _Destruction_: [
+    '_VarOrFnCall_{boxed} EQUALS_VBAR _Constructed_{unboxed}'
+    '_VarOrFnCall_{boxed} EQUALS_VBAR _ID_{unboxed}'
   ]
 
   _String_: [
@@ -294,6 +307,7 @@ GRAMMAR = {
   WHILE: 'while '
   ELSE: 'else'
   EQUALS: '='
+  EQUALS_VBAR: '=\\|'
   DOT: '\\.'
   COLON: ':'
   _ID_: '[@_$a-zA-Z][_$a-zA-Z0-9]*'
@@ -339,6 +353,7 @@ GRAMMAR = {
   DOUBLE_RIGHT_ARROW: '=>'
   INDENT: ''
   UNINDENT: ''
+  SPACE: ''
   _EMPTY_: ''
   EMPTY: ''
 }

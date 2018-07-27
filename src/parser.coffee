@@ -94,7 +94,8 @@ class Parser
     node = @history[@history.length - 1]
     {rule, parseIdx} = node
     if rule.isLiteral
-      # Ignore whitespace and comments
+      # Ignore whitespace and comments, save oldIdx for SPACE token
+      oldIdx = parseIdx
       parseIdx = @_parseWhitespaceAndComments(parseIdx)
       literalMatch = @inputStr[parseIdx..].match(new RegExp("^#{rule.regex}"))
       if not literalMatch?
@@ -103,6 +104,9 @@ class Parser
       nextIdx = parseIdx + literalMatch[0].length
       if rule.isASTNode
         node.literal = literalMatch[0]
+      else if rule.name == 'SPACE' and parseIdx == oldIdx
+        @_tokenNoMatch(node.parent, rule.name)
+        return
       else if rule.name == 'INDENT'
         @indentLevel++
       else if rule.name == 'UNINDENT'
