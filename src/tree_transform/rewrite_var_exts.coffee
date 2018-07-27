@@ -44,9 +44,9 @@ replaceVarExtsWithRefs = (astNode) ->
 
 
 ###
-Replace all _ArrayRef_ nodes with @__arr_get__ nodes, unless they are the
+Replace all _ArrayRef_ nodes with __arr_get__ nodes, unless they are the
 target of an _Assignment_, in which case we replace the entire _Assignment_
-with @__arr_set__
+with __arr_set__
 ###
 replaceArrRefsWithFnCalls = (astNode) ->
 
@@ -59,7 +59,7 @@ replaceArrRefsWithFnCalls = (astNode) ->
   if astNode.isAssignment()
     lhs = astNode.children.target
     if lhs.isArrayRef()
-      idNode = ASTNode.make('_ID_', '@__arr_set__')
+      idNode = ASTNode.make('_ID_', '__arr_set__')
       varNode = ASTNode.make('_Variable_')
       varNode.children = {id: idNode}
       fnCallNode = ASTNode.make('_FunctionCall_')
@@ -67,7 +67,7 @@ replaceArrRefsWithFnCalls = (astNode) ->
       astNode = fnCallNode
 
   else if astNode.isArrayRef()
-    idNode = ASTNode.make('_ID_', '@__arr_get__')
+    idNode = ASTNode.make('_ID_', '__arr_get__')
     varNode = ASTNode.make('_Variable_')
     varNode.children = {id: idNode}
     fnCallNode = ASTNode.make('_FunctionCall_')

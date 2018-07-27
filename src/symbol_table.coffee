@@ -3,6 +3,7 @@ class SymbolTable
   constructor: ->
     @_astIdToSymbol = {}
     @_scopeAnonCount = {}
+    @_globals = {}
 
   setNamedSymbol: (astNode, varName) ->
     name = @getSymbolName(varName, astNode.scopeId)
@@ -18,7 +19,9 @@ class SymbolTable
     @_astIdToSymbol[astNode.astId] = name
     return name
 
-  getSymbolName: (varName, scopeId) -> "$#{scopeId}~#{varName}"
+  getSymbolName: (varName, scopeId) ->
+    scopeId = if varName of @_globals then 0 else scopeId
+    return "$#{scopeId}~#{varName}"
 
   scopeReturnSymbol: (scopeId) -> "$#{scopeId}~return"
 
@@ -26,7 +29,9 @@ class SymbolTable
 
   getScope: (symbol) -> symbol.split('~')[0][1..]
 
-  isGlobal: (symbol) -> symbol.split('~')[1][0] == '@'
+  setGlobal: (varName) -> @_globals[varName] = true
+
+  isGlobal: (symbol) -> symbol.split('~')[1] of @_globals
 
   isFunctionDef: (symbol) -> symbol.split('_')[1] == 'FunctionDef'
 

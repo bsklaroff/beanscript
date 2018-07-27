@@ -8,9 +8,6 @@ _assignASTIds = (astNode, next) ->
   # Assign id to current node and track that we've assigned it
   astNode.astId = "#{next.id}"
   astNode.scopeId = "#{next.scopeId}"
-  # Variable names prefaced by '@' symbol are global
-  if not astNode.length? and astNode.isVariable() and astNode.children.id.literal[0] == '@'
-    astNode.scopeId = "0"
   next.id++
   # If astNode is a function def, create a new scope for it and its children
   prevScopeId = next.scopeId

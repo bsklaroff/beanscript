@@ -1,10 +1,30 @@
 SymbolTable = require('./symbol_table')
 symbolTable = null
 
+
 genSymbols = (rootNode) ->
   symbolTable = new SymbolTable()
+  _setGlobalFunctionDefs(rootNode)
   _parseSymbols(rootNode)
   return symbolTable
+
+
+# Ensure all typeclassed functions and top-level function defs are marked as
+# global symbols
+_setGlobalFunctionDefs = (rootNode) ->
+  for statement in rootNode.children.statements
+
+    if statement.isAssignment() and statement.children.source.isFunctionDef()
+      target = statement.children.target
+      if target.isVariable()
+        varName = target.children.id.literal
+        symbolTable.setGlobal(varName)
+
+    else if statement.isTypeclassDef()
+      for typeDefNode in statement.children.body
+        fnName = typeDefNode.children.name.literal
+        symbolTable.setGlobal(fnName)
+
 
 _parseSymbols = (astNode) ->
   # If astNode is an array, gen symbols for each element

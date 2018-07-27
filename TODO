@@ -38,6 +38,7 @@ fix typeclass issues
 - allow constructed types in typeinst headers
 implement these recommendations: https://www.microsoft.com/en-us/research/wp-content/uploads/1997/01/multi.pdf
 - including multi-parameter type classes with functional dependencies?
+add syntax for global constants
 allow closures
 memory management
 
@@ -47,7 +48,6 @@ functional language constructs built in (map, filter, reduce, etc)
 currying
 - a(_, 23, _) means curry with 23 as the second argument
 compose operator in prelude
-can we get rid of @ symbol?
 optional, named fn arguments
 by default, functions do not inherit parent scope
 - also by default, no argument object / array mutation inside functions ->

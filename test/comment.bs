@@ -9,4 +9,4 @@ comment ###   ###
 #
 
 #
-@print(a)
+print(a)
