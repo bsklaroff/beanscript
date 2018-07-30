@@ -61,11 +61,11 @@ GRAMMAR = {
   ]
 
   _Type_: [
-    'TYPE _ID_{name} _ID_*{params} EQUALS (_TypeOpt_ (VBAR _TypeOpt_)*){options}'
+    'TYPE _ID_{name} _ID_*{params[]} EQUALS (_TypeOpt_ (VBAR _TypeOpt_)*){options[]}'
   ]
   _TypeOpt_: [
-    '_ID_{constructor} constructedTypeInner{param}'
-    '_ID_{constructor} _EMPTY_{param}'
+    '_ID_{constructor} constructedTypeInner{dataType}'
+    '_ID_{constructor} _EMPTY_{dataType}'
   ]
 
   _Typealias_: [
@@ -233,13 +233,13 @@ GRAMMAR = {
   ]
 
   _Constructed_: [
-    '_ID_{constructor} SPACE LEFT_PAREN _Constructed_{param} RIGHT_PAREN'
-    '_ID_{constructor} SPACE nonOpExpr{param}'
+    '_ID_{constructor} SPACE LEFT_PAREN _Constructed_{data} RIGHT_PAREN'
+    '_ID_{constructor} SPACE nonOpExpr{data}'
   ]
 
   _Destruction_: [
     '_VarOrFnCall_{boxed} EQUALS_VBAR _Constructed_{unboxed}'
-    '_VarOrFnCall_{boxed} EQUALS_VBAR _ID_{unboxed}'
+    '_VarOrFnCall_{boxed} EQUALS_VBAR _Variable_{unboxed}'
   ]
 
   _String_: [

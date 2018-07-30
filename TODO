@@ -1,10 +1,3 @@
-type ytype = abc {a :: atype, b :: btype}
-- allow ytype k = abc {a :: k, b :: int}
-- allow options, e.g. type maybe a = null | some a
-  - case statements to unpack option types
-  - can also unpack in fn args
-  - this takes care of enums
-  - question marks unpack maybes?
 typealias xtype = {a :: atype, b :: btype}
 - allow xtype k = {a :: k, b :: int}
 built in hashmap and hashset
@@ -18,10 +11,19 @@ implement number types other than i32
 - do we need monomorphism restriction?
 - multi-param typeclasses?
 disallow recursive types?
+constructed types
+- restrict where types can be constructed / unboxed
+- disallow conjoining =| clauses with anything other than 'and'
+- allow e.g. a =| Just 23
+- syntactic sugar: question marks unpack maybes
+- deal with unboxed variable scopes
+  - restrict to parent if / while statement
+  - disallow variable overwriting by unboxing
+- allow unpacking of function args
+  - allow naming of boxed type with @ notation
+  - also allow cases via matchargs, ensure cases are exhaustive
 add a lexer to keep ids from running together
 fix parser bug where node's empty child array leads to undefined key
-add error handling with pretty error messages
-add documentation
 fix type inference issues
 - redefining fns means the final generalized type is not known until the last
   definition, so if we instantiate a fn before the last definition, the type
@@ -39,6 +41,8 @@ fix typeclass issues
 implement these recommendations: https://www.microsoft.com/en-us/research/wp-content/uploads/1997/01/multi.pdf
 - including multi-parameter type classes with functional dependencies?
 add syntax for global constants
+add error handling with pretty error messages
+add documentation
 allow closures
 memory management
 

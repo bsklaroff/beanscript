@@ -1,10 +1,13 @@
 SymbolTable = require('./symbol_table')
 symbolTable = null
 
+constructors = null
 
 genSymbols = (rootNode) ->
   symbolTable = new SymbolTable()
+  constructors = {}
   _setGlobalFunctionDefs(rootNode)
+  _parseConstructors(rootNode)
   _parseSymbols(rootNode)
   return symbolTable
 
@@ -24,6 +27,15 @@ _setGlobalFunctionDefs = (rootNode) ->
       for typeDefNode in statement.children.body
         fnName = typeDefNode.children.name.literal
         symbolTable.setGlobal(fnName)
+
+
+# Pull out all constructor names as special symbols
+_parseConstructors = (rootNode) ->
+  for statement in rootNode.children.statements
+    if statement.isType()
+      for optionNode in statement.children.options
+        constructor = optionNode.children.constructor.literal
+        constructors[constructor] = true
 
 
 _parseSymbols = (astNode) ->
@@ -62,7 +74,19 @@ _parseSymbols = (astNode) ->
 
   else if astNode.isVariable()
     varName = astNode.children.id.literal
-    symbolTable.setNamedSymbol(astNode, varName)
+    if varName == '_' or varName of constructors
+      symbolTable.setAnonSymbol(astNode, varName)
+    else
+      symbolTable.setNamedSymbol(astNode, varName)
+
+  else if astNode.isConstructed()
+    _parseSymbols(astNode.children.data)
+    symbolTable.setAnonSymbol(astNode)
+
+  else if astNode.isDestruction()
+    _parseSymbols(astNode.children.boxed)
+    _parseSymbols(astNode.children.unboxed)
+    symbolTable.setAnonSymbol(astNode)
 
   else if astNode.isNumber()
     symbolTable.setAnonSymbol(astNode, astNode.literal)

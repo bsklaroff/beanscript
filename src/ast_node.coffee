@@ -40,6 +40,8 @@ NODE_TYPES = [
   '_ConstructedType_'
   '_FunctionType_'
   '_Assignable_'
+  '_Constructed_'
+  '_Destruction_'
   '_VarOrFnCall_'
   '_ArgList_'
   '_Variable_'

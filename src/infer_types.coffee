@@ -18,6 +18,8 @@ FORMS =
 
 symbolTable = null
 typeCount = null
+newTypes = null
+typeConstructors = null
 fnTypeclasses = null
 superclasses = null
 typeclassEnv = null
@@ -27,11 +29,14 @@ typeEnv = null
 inferTypes = (rootNode, _symbolTable) ->
   symbolTable = _symbolTable
   typeCount = -1
+  newTypes = {}
+  typeConstructors = {}
   fnTypeclasses = {}
   superclasses = {}
   typeclassEnv = {}
   objclassEnv = {}
   typeEnv = {}
+  _parseNewTypes(rootNode)
   _parseSupertypes(rootNode)
   _parseTypeDefs(rootNode)
   _parseTypes(rootNode)
@@ -80,6 +85,43 @@ _genFunctionType = (arr) ->
     form: FORMS.FUNCTION
     arr: arr
   }
+
+###
+Parse all explicitly defined types
+###
+
+_parseNewTypes = (rootNode) ->
+  for astNode in rootNode.children.statements
+    if astNode.isType()
+      typeName = astNode.children.name.literal
+      typeParams = utils.map(astNode.children.params, (p) -> p.literal)
+      newTypes[typeName] = {
+        params: typeParams
+        constructors: []
+      }
+      for optNode in astNode.children.options
+        constructor = optNode.children.constructor.literal
+        if constructor of typeConstructors
+          console.error("Type constructor #{constructor} defined multiple times")
+          process.exit(1)
+        dataTypeNode = optNode.children.dataType
+        typevarMap = null
+        dataScheme = null
+        if not dataTypeNode.isEmpty()
+          typevarMap = {}
+          dataType = _parseTypeNode(dataTypeNode, typevarMap)
+          dataScheme = _generalizeType(dataType, 0)
+          for k of typevarMap
+            if k not in typeParams
+              console.error("Typevar #{k} in constructor #{constructor} not found in declaration for type #{typeName}")
+              process.exit(1)
+        typeConstructors[constructor] = {
+          type: typeName
+          typevar_map: typevarMap
+          data_scheme: dataScheme
+        }
+        newTypes[typeName].constructors.push(constructor)
+  return
 
 ###
 Parse type hierarchy from typeclass and typeinst headers
@@ -208,15 +250,15 @@ _parseFunctionType = (functionTypeNode, typevarMap) ->
 Parse and infer all types
 ###
 
-_parseTypes = (astNode) ->
+_parseTypes = (astNode, insideMatch = false) ->
   # If astNode is an array, gen types for each element
   if astNode.length?
     for child in astNode
-      _parseTypes(child)
+      _parseTypes(child, insideMatch)
     return
 
-  # Typedefs have already been parsed
-  if astNode.isTypeclassDef() or astNode.isTypeDef()
+  # Typedefs and new types have already been parsed
+  if astNode.isTypeclassDef() or astNode.isTypeDef() or astNode.isType()
     return
 
   if astNode.isNumber()
@@ -233,17 +275,78 @@ _parseTypes = (astNode) ->
 
   if astNode.isVariable()
     symbol = symbolTable.getNodeSymbol(astNode)
+    varName = astNode.children.id.literal
+    if varName of typeConstructors
+      if typeConstructors[varName].boxedType?
+        console.error("Constructor #{varName} missing boxed data")
+        process.exit(1)
+      typeName = typeConstructors[varName].type
+      params = utils.map(newTypes[typeName].params, (p) -> _genVariableType())
+      type = _genConstructedType(typeName, params)
+      _setSymbolType(symbol, type)
+      return type
+    if insideMatch
+      if symbol of typeEnv
+        console.error("Symbol #{symbol} assigned before destruction")
+        process.exit(1)
+      type = _genVariableType()
+      _setSymbolType(symbol, type)
+      return type
     scheme = typeEnv[symbol]
     if not scheme?
       console.error("Symbol #{symbol} referenced before assignment")
       process.exit(1)
     return _instantiateScheme(scheme)
 
+  if astNode.isConstructed()
+    constructor = astNode.children.constructor.literal
+    dataNode = astNode.children.data
+    if constructor not of typeConstructors
+      console.error("Undeclared constructor: #{constructor}")
+      process.exit(1)
+    _parseTypes(dataNode, insideMatch)
+    typeInfo = typeConstructors[constructor]
+    [typeName, typevarMap, dataScheme] = [typeInfo.type, typeInfo.typevar_map, typeInfo.data_scheme]
+    paramNames = newTypes[typeName].params
+    # Generalize dataScheme and keep track of the subst
+    subst = {}
+    for typevar in dataScheme.forall
+      newTypevar = _genVariableType()
+      subst[typevar] = newTypevar
+    # Construct this node's type
+    params = []
+    for paramName in paramNames
+      if paramName of typevarMap
+        params.push(subst[typevarMap[paramName].var])
+      else
+        params.push(_genVariableType())
+    type = _genConstructedType(typeName, params)
+    symbol = symbolTable.getNodeSymbol(astNode)
+    _setSymbolType(symbol, type)
+    # None of dataType's typevars will generalize below because they are ftvs
+    # of this node's type we just set above
+    dataType = _applySubstType(dataScheme.type, subst)
+    dataSymbol = symbolTable.getNodeSymbol(dataNode)
+    _assignSymbolType(dataSymbol, dataType)
+    return typeEnv[symbol].type
+
+  if astNode.isDestruction()
+    boxed = astNode.children.boxed
+    unboxed = astNode.children.unboxed
+    boxedType = _parseTypes(boxed)
+    unboxedType = _parseTypes(unboxed, true)
+    subst = _unifyTypes(boxedType, unboxedType)
+    _applySubstEnv(subst)
+    symbol = symbolTable.getNodeSymbol(astNode)
+    type = _genConcreteType(PRIMITIVES.BOOL)
+    _setSymbolType(symbol, type)
+    return type
+
   if astNode.isArray()
     symbol = symbolTable.getNodeSymbol(astNode)
     type = _genConstructedType(CONSTRUCTORS.ARR, [_genVariableType()])
     for itemNode in astNode.children.items
-      itemType = _parseTypes(itemNode)
+      itemType = _parseTypes(itemNode, insideMatch)
       subst = _unifyTypes(type.params[0], itemType)
       _applySubstEnv(subst)
       type = _applySubstType(type, subst)
@@ -259,7 +362,7 @@ _parseTypes = (astNode) ->
     props = {}
     for propNode in astNode.children.props
       key = propNode.children.key.literal
-      propType = _parseTypes(propNode.children.val)
+      propType = _parseTypes(propNode.children.val, insideMatch)
       if key of props
         console.error("Key #{key} redefined in object #{JSON.stringify(astNode)}")
         process.exit(1)
@@ -393,7 +496,7 @@ _parseTypes = (astNode) ->
     return type
 
   for name, child of astNode.children
-    _parseTypes(child)
+    _parseTypes(child, insideMatch)
 
   return
 
@@ -478,6 +581,7 @@ _instantiateSubstScheme = (scheme, substTypevar, substType) ->
 _setSymbolType = (symbol, type) ->
   if typeEnv[symbol]?
     console.error("Cannot set type #{JSON.stringify(type)} for symbol #{symbol} which already has scheme #{JSON.stringify(typeEnv[symbol])}")
+    console.trace()
     process.exit(1)
   typeEnv[symbol] = _genScheme([], type)
   return
