@@ -489,6 +489,23 @@ _parseTypes = (astNode, insideMatch = false) ->
     _setSymbolType(symbol, fnCallType)
     return fnCallType
 
+  if astNode.isIf()
+    condition = astNode.children.condition
+    _parseTypes(condition)
+    conditionSymbol = symbolTable.getNodeSymbol(condition)
+    _assignSymbolType(conditionSymbol, _genConcreteType(PRIMITIVES.BOOL))
+    _parseTypes(astNode.children.body)
+    _parseTypes(astNode.children.else)
+    return
+
+  if astNode.isWhile()
+    condition = astNode.children.condition
+    _parseTypes(condition)
+    conditionSymbol = symbolTable.getNodeSymbol(condition)
+    _assignSymbolType(conditionSymbol, _genConcreteType(PRIMITIVES.BOOL))
+    _parseTypes(astNode.children.body)
+    return
+
   if astNode.isWast()
     symbol = symbolTable.getNodeSymbol(astNode)
     type = _genVariableType()

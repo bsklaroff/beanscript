@@ -17,8 +17,8 @@ for fname in fs.readdirSync(testDir)
   execSync("rm #{temp2}")
   outputFname = "#{fname[...-3]}.stdout"
   if not fs.existsSync("#{testDir}/#{outputFname}")
-    console.error("No stdout file found for #{fname}")
-    process.exit(1)
+    console.log("FAILED: #{fname} (no stdout file found)")
+    continue
   expected = fs.readFileSync("#{testDir}/#{outputFname}").toString()
   if stdout == expected
     console.log("PASSED: #{fname}")

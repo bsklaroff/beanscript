@@ -239,6 +239,21 @@ _genSexprs = (astNode) ->
     sexprs = sexprs.concat(_genSexprs(child))
     sexprs.push(_set(opParenSymbol, _get(childSymbol)))
 
+  else if astNode.isIf()
+    conditionNode = astNode.children.condition
+    conditionSymbol = symbolTable.getNodeSymbol(conditionNode)
+    bodyNode = astNode.children.body
+    elseNode = astNode.children.else
+    sexprs = sexprs.concat(_genSexprs(conditionNode))
+    ifSexpr = ['if', _unbox(conditionSymbol)]
+    ifSexpr.push(['then'].concat(_genSexprs(bodyNode)))
+    if not elseNode.isEmpty()
+      ifSexpr.push(['else'].concat(_genSexprs(elseNode)))
+    sexprs.push(ifSexpr)
+
+  else if astNode.isElse()
+    sexprs = sexprs.concat(_genSexprs(astNode.children.body))
+
   else if astNode.isWhile()
     cond = astNode.children.condition
     condSymbol = symbolTable.getNodeSymbol(cond)

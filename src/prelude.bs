@@ -59,6 +59,14 @@ typeinst Eq Bool
   __eq__: (x, y) -> ((i32.eq x y))
   __neq__: (x, y) -> ((i32.ne x y))
 
+# alloc allocates nbytes, returns heap pointer to start of allocated memory
+_alloc :: I32 -> I32
+_alloc = (nbytes) ->
+  # need to add 4 to avoid setting hp to its own heap location
+  hp = ((i32.add (get_global $hp) (i32.const 4)))
+  ((set_global $hp (i32.add (get_global $hp) nbytes)))
+  return hp
+
 ###
 Array functions
 ###
@@ -94,19 +102,17 @@ push = (arr, val) ->
 
 _reallocate :: Arr a -> Void
 _reallocate = (arr) ->
-  new_data_start = ((get_global $hp))
   arr_len = len(arr)
+  new_allocated = 2 * (arr_len + 1)
+  new_data_start = _alloc(new_allocated)
   i = 0
   while i < arr_len
     val = arr[i]
     new_heap_loc = new_data_start + i * 4
     ((i32.store new_heap_loc &val))
     i = i + 1
-  new_allocated = 2 * (arr_len + 1)
-  new_hp = new_data_start + new_allocated * 4
   ((i32.store (i32.add &arr (i32.const 4)) new_allocated))
   ((i32.store (i32.add &arr (i32.const 8)) new_data_start))
-  ((set_global $hp new_hp))
 
 pop :: Arr a -> a
 pop = (arr) ->
