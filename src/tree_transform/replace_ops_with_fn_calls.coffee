@@ -16,6 +16,7 @@ OP_MAP =
   _AND_: '__and__'
   _OR_: '__or__'
   _NEG_: '__neg__'
+  _NOT_: '__not__'
 
 replaceOpsWithFnCalls = (astNode) ->
   # Check if astNode is an array

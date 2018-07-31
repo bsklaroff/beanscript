@@ -59,6 +59,12 @@ typeinst Eq Bool
   __eq__: (x, y) -> ((i32.eq x y))
   __neq__: (x, y) -> ((i32.ne x y))
 
+__not__ :: Bool -> Bool
+__not__ = (x) ->
+  if x
+    return False
+  return True
+
 # alloc allocates nbytes, returns heap pointer to start of allocated memory
 _alloc :: I32 -> I32
 _alloc = (nbytes) ->

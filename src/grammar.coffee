@@ -155,9 +155,9 @@ GRAMMAR = {
   ]
 
   _OpExpression_: [
-    'nonOpExpr{lhs} op{op} expr{rhs}'
     '_EMPTY_{lhs} _NOT_{op} expr{rhs}'
     '_EMPTY_{lhs} _NEG_{op} expr{rhs}'
+    'nonOpExpr{lhs} op{op} expr{rhs}'
   ]
   op: [
     '_EXPONENT_'
