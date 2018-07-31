@@ -7,13 +7,13 @@ typeclass Eq a <= (Show)
   __eq__ :: a -> a -> Bool
   __neq__ :: a -> a -> Bool
 
-typeclass Cmp a <= (Eq)
+typeclass Ord a <= (Eq)
   __lt__ :: a -> a -> Bool
   __lte__ :: a -> a -> Bool
   __gt__ :: a -> a -> Bool
   __gte__ :: a -> a -> Bool
 
-typeclass Num a <= (Cmp)
+typeclass Num a <= (Ord)
   __add__ :: a -> a -> a
   __sub__ :: a -> a -> a
   __mul__ :: a -> a -> a
