@@ -1,0 +1,17 @@
+a = Null
+b = Just 23
+
+if a =| Null
+  print(0)
+
+if a =| Just _
+  print(1)
+
+if b =| Null
+  print(2)
+
+if b =| Just _
+  print(3)
+
+if b =| Just _b
+  print(_b)

@@ -25,11 +25,12 @@ TYPE_INDICES =
   Bool: 4
 
 symbolTable = null
+newTypes = null
 typeEnv = null
 
 genWast = (rootNode, _symbolTable, typeInfo) ->
   symbolTable = _symbolTable
-  {typeEnv} = typeInfo
+  {newTypes, typeEnv} = typeInfo
   # Parse typeinsts to map typeclass fns to fn defs
   fnDefs = []
   typeclassFns = _getTypeclassFns(rootNode)
@@ -232,6 +233,46 @@ _genSexprs = (astNode) ->
     else
       console.error("Assignment target must be variable or array ref, found #{JSON.stringify(target)}")
 
+  else if astNode.isConstructed()
+    dataNode = astNode.children.data
+    sexprs = sexprs.concat(_genSexprs(dataNode))
+    constructor = astNode.children.constructor.literal
+    symbol = symbolTable.getNodeSymbol(astNode)
+    type = typeEnv[symbol].type
+    idx = newTypes[type.name].constructors.indexOf(constructor)
+    sexprs = sexprs.concat(_setHeapVar(symbol, ['i32.const', idx]))
+    if not dataNode.isEmpty()
+      dataSymbol = symbolTable.getNodeSymbol(dataNode)
+      sexprs = sexprs.concat(_addToHeap(_genConcreteType(PRIMITIVES.I32), _get(dataSymbol)))
+
+  else if astNode.isDestruction()
+    symbol = symbolTable.getNodeSymbol(astNode)
+    sexprs = sexprs.concat(_setHeapVar(symbol, ['i32.const', 0]))
+    unboxed = astNode.children.unboxed
+    unboxedSymbol = symbolTable.getNodeSymbol(unboxed)
+    constructor = unboxed.children.constructor.literal
+    unboxedType = typeEnv[unboxedSymbol].type
+    idx = newTypes[unboxedType.name].constructors.indexOf(constructor)
+    boxed = astNode.children.boxed
+    boxedSymbol = symbolTable.getNodeSymbol(boxed)
+    ifSexpr = ['if', ['i32.eq', _unbox(boxedSymbol), ['i32.const', idx]]]
+    thenSexpr = ['then']
+    thenSexpr = thenSexpr.concat(_setHeapVar(symbol, ['i32.const', 1]))
+    dataNode = unboxed.children.data
+    if not dataNode.isEmpty()
+      if dataNode.isVariable()
+        varName = dataNode.children.id.literal
+        if varName != '_'
+          dataSymbol = symbolTable.getNodeSymbol(dataNode)
+          heapLoc = ['i32.add', _get(boxedSymbol), ['i32.const', 4]]
+          symbol = symbolTable.getNodeSymbol(astNode)
+          thenSexpr.push(_set(dataSymbol, ['i32.load', heapLoc]))
+      else
+        console.error('Nested destruction unimplemented')
+        process.exit(1)
+    ifSexpr.push(thenSexpr)
+    sexprs.push(ifSexpr)
+
   else if astNode.isOpParenGroup()
     opParenSymbol = symbolTable.getNodeSymbol(astNode)
     child = astNode.children.opExpr
@@ -428,10 +469,10 @@ _addToHeap = (type, dataSexpr) ->
   ]
 
 _getStoreFn = (type) ->
-  if type.form != FORMS.CONCRETE
+  if type.form not in [FORMS.CONCRETE, FORMS.CONSTRUCTED]
     console.error("Could not get store fn for non-concrete type: #{JSON.stringify(type)}")
     process.exit(1)
-  if type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+  if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
     return 'i32.store'
   else if type.name == PRIMITIVES.I64
     return 'i64.store'
@@ -440,10 +481,10 @@ _getStoreFn = (type) ->
   return
 
 _getTypeSize = (type) ->
-  if type.form != FORMS.CONCRETE
+  if type.form not in [FORMS.CONCRETE, FORMS.CONSTRUCTED]
     console.error("Could not get type size for non-concrete type: #{JSON.stringify(type)}")
     process.exit(1)
-  if type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+  if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
     return ['i32.const', '4']
   else if type.name == PRIMITIVES.I64
     return ['i32.const', '8']
@@ -462,10 +503,10 @@ _getTypeIndex = (type) ->
 
 _unbox = (symbol) ->
   type = typeEnv[symbol].type
-  if type.form != FORMS.CONCRETE
+  if type.form not in [FORMS.CONCRETE, FORMS.CONSTRUCTED]
     console.error("Could not unbox non-concrete type: #{JSON.stringify(type)}")
     process.exit(1)
-  if type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+  if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
     return ['i32.load', _get(symbol)]
   else if type.name == PRIMITIVES.I64
     return ['i64.load', _get(symbol)]
@@ -517,11 +558,13 @@ _parseBSWast = (astNode) ->
 _shouldAddNewline = (arr, i) ->
   if utils.isArray(arr[0])
     return true
-  if arr[0] in ['loop', 'func']
+  if arr[0] in ['loop', 'func', 'if', 'then', 'else']
     # Add newline at end only if we added a newline for the last element in arr
     if i == -1
       i = arr.length - 2
     if not utils.isArray(arr[i + 1])
+      return false
+    if arr[0] == 'if' and i == 0
       return false
     if arr[i + 1][0] in ['import', 'export', 'param', 'result']
       return false

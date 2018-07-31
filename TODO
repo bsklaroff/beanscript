@@ -15,6 +15,8 @@ constructed types
 - restrict where types can be constructed / unboxed
 - disallow conjoining =| clauses with anything other than 'and'
 - allow e.g. a =| Just 23
+- figure out type defaulting for ambiguous destructed types?
+- allow nested destructions
 - syntactic sugar: question marks unpack maybes
 - deal with unboxed variable scopes
   - restrict to parent if / while statement
@@ -48,6 +50,7 @@ memory management
 
 LONG TERM IDEAS
 alternative fn calling syntax: var.fn(arg) where var is passed as first arg of fn
+json support
 functional language constructs built in (map, filter, reduce, etc)
 currying
 - a(_, 23, _) means curry with 23 as the second argument

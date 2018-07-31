@@ -3,8 +3,7 @@ ASTNode = require('../ast_node')
 amendTypeclasses = (rootNode) ->
   # All typeclasses and typeinsts must be defined in global scope
   for astNode in rootNode.children.statements
-    # If astNode is a typeclass, prepend all fn names with '@' and add typeclass
-    # context to all typedefs
+    # If astNode is a typeclass, add typeclass context to all typedefs
     if astNode.isTypeclassDef()
       typeclass = astNode.children.typeclass
       className = typeclass.children.class.literal

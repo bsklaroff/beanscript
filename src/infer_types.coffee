@@ -41,7 +41,7 @@ inferTypes = (rootNode, _symbolTable) ->
   _parseTypeDefs(rootNode)
   _parseTypes(rootNode)
   _addContextTypevars()
-  return {superclasses, typeclassEnv, objclassEnv, typeEnv}
+  return {newTypes, superclasses, typeclassEnv, objclassEnv, typeEnv}
 
 ###
 Type object generation functions
@@ -275,16 +275,6 @@ _parseTypes = (astNode, insideMatch = false) ->
 
   if astNode.isVariable()
     symbol = symbolTable.getNodeSymbol(astNode)
-    varName = astNode.children.id.literal
-    if varName of typeConstructors
-      if typeConstructors[varName].boxedType?
-        console.error("Constructor #{varName} missing boxed data")
-        process.exit(1)
-      typeName = typeConstructors[varName].type
-      params = utils.map(newTypes[typeName].params, (p) -> _genVariableType())
-      type = _genConstructedType(typeName, params)
-      _setSymbolType(symbol, type)
-      return type
     if insideMatch
       if symbol of typeEnv
         console.error("Symbol #{symbol} assigned before destruction")
@@ -310,13 +300,14 @@ _parseTypes = (astNode, insideMatch = false) ->
     paramNames = newTypes[typeName].params
     # Generalize dataScheme and keep track of the subst
     subst = {}
-    for typevar in dataScheme.forall
-      newTypevar = _genVariableType()
-      subst[typevar] = newTypevar
+    if not dataNode.isEmpty()
+      for typevar in dataScheme.forall
+        newTypevar = _genVariableType()
+        subst[typevar] = newTypevar
     # Construct this node's type
     params = []
     for paramName in paramNames
-      if paramName of typevarMap
+      if not dataNode.isEmpty() and paramName of typevarMap
         params.push(subst[typevarMap[paramName].var])
       else
         params.push(_genVariableType())
@@ -325,14 +316,22 @@ _parseTypes = (astNode, insideMatch = false) ->
     _setSymbolType(symbol, type)
     # None of dataType's typevars will generalize below because they are ftvs
     # of this node's type we just set above
-    dataType = _applySubstType(dataScheme.type, subst)
-    dataSymbol = symbolTable.getNodeSymbol(dataNode)
-    _assignSymbolType(dataSymbol, dataType)
+    if dataNode.isEmpty()
+      if dataScheme?
+        console.error("Constructor #{constructor} missing data node")
+        process.exit(1)
+    else
+      dataType = _applySubstType(dataScheme.type, subst)
+      dataSymbol = symbolTable.getNodeSymbol(dataNode)
+      _assignSymbolType(dataSymbol, dataType)
     return typeEnv[symbol].type
 
   if astNode.isDestruction()
     boxed = astNode.children.boxed
     unboxed = astNode.children.unboxed
+    if unboxed.isVariable()
+      console.error("No data constructor found called #{unboxed.children.id.literal}")
+      process.exit(1)
     boxedType = _parseTypes(boxed)
     unboxedType = _parseTypes(unboxed, true)
     subst = _unifyTypes(boxedType, unboxedType)
