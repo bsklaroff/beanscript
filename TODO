@@ -1,4 +1,3 @@
-fn argument matching
 built in hashmap
 
 implement strings
@@ -30,7 +29,8 @@ constructed types
   - disallow variable overwriting by unboxing
 - allow unpacking of function args
   - allow naming of boxed type with @ notation
-  - also allow cases via matchargs, ensure cases are exhaustive
+  - also allow cases via matchargs
+  - ensure cases are exhaustive
 fix type inference issues
 - redefining fns means the final generalized type is not known until the last
   definition, so if we instantiate a fn before the last definition, the type

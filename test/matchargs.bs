@@ -1,0 +1,5 @@
+type Box a = _Box a
+
+add_boxed = (_Box x, _Box y) -> x + y
+
+print(add_boxed(_Box 5, _Box 7))

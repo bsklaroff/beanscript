@@ -430,8 +430,11 @@ _parseTypes = (astNode, insideMatch = false) ->
 
   if astNode.isFunctionDef()
     for argNode in astNode.children.args
-      symbol = symbolTable.getNodeSymbol(argNode)
-      _setSymbolType(symbol, _genVariableType())
+      if argNode.isConstructed()
+        _parseTypes(argNode, true)
+      else
+        symbol = symbolTable.getNodeSymbol(argNode)
+        _setSymbolType(symbol, _genVariableType())
     _parseTypes(astNode.children.body)
     # Generate function def type from args and return symbol
     typeArr = []

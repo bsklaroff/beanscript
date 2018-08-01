@@ -283,11 +283,11 @@ GRAMMAR = {
     'EMPTY{args[]} fnDef0{body[]}'
   ]
   argDefList: [
-    'LEFT_PAREN _FunctionDefArg_ (COMMA _FunctionDefArg_)* RIGHT_PAREN'
+    'LEFT_PAREN functionDefArg (COMMA functionDefArg)* RIGHT_PAREN'
   ]
-  _FunctionDefArg_: [
-    '_ID_{id} EQUALS fnDefOrExpr{default}'
-    '_ID_{id} _EMPTY_{default}'
+  functionDefArg: [
+    '_Constructed_'
+    '_Variable_'
   ]
   fnDef0: [
     'RIGHT_ARROW INDENT _NEWLINE_ statements UNINDENT'

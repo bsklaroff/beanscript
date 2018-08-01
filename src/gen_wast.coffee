@@ -154,7 +154,8 @@ _genFn = (symbol, args, statements, scopeId) ->
     sexpr = sexpr.concat(_genArgs(argSymbols))
     if not _isVoid(fnType.arr[fnType.arr.length - 1])
       sexpr.push(['result', 'i32'])
-  sexpr = sexpr.concat(_genLocals(symbol, argSymbols, scopeId))
+  sexpr = sexpr.concat(_genLocals(symbol, args, scopeId))
+  sexpr = sexpr.concat(_genArgDestructions(args))
   sexpr = sexpr.concat(_genSexprs(statements))
   return sexpr
 
@@ -196,13 +197,45 @@ _genArgs = (argSymbols) ->
     sexprs.push(['param', argSymbol, 'i32'])
   return sexprs
 
-_genLocals = (fnNameSymbol, argSymbols, scopeId) ->
+_genLocals = (fnNameSymbol, argNodes, scopeId) ->
   sexprs = []
+  dataSymbols = []
+  # Gen (local ...) var declerations for unboxed data in args
+  for argNode in argNodes
+    if argNode.isConstructed()
+      dataNode = argNode.children.data
+      if dataNode.isVariable() and dataNode.children.id.literal != '_'
+        dataSymbol = symbolTable.getNodeSymbol(dataNode)
+        sexprs.push(['local', dataSymbol, 'i32'])
+        dataSymbols.push(dataSymbol)
   # Gen (local ...) var declerations
+  argSymbols = utils.map(argNodes, (arg) -> symbolTable.getNodeSymbol(arg))
   for symbol, scheme of typeEnv
-    if symbolTable.getScope(symbol) == scopeId and not symbolTable.isGlobal(symbol) and
-       not symbolTable.isReturn(symbol) and symbol not in argSymbols and symbol != fnNameSymbol
+    if symbolTable.getScope(symbol) == scopeId and
+       not symbolTable.isGlobal(symbol) and
+       not symbolTable.isReturn(symbol) and
+       symbol not in argSymbols and
+       symbol not in dataSymbols and
+       symbol != fnNameSymbol
       sexprs.push(['local', symbol, 'i32'])
+  return sexprs
+
+_genArgDestructions = (argNodes) ->
+  sexprs = []
+  for argNode in argNodes
+    if argNode.isConstructed()
+      argSymbol = symbolTable.getNodeSymbol(argNode)
+      dataNode = argNode.children.data
+      if not dataNode.isEmpty()
+        if dataNode.isVariable()
+          varName = dataNode.children.id.literal
+          if varName != '_'
+            dataSymbol = symbolTable.getNodeSymbol(dataNode)
+            heapLoc = ['i32.add', _get(argSymbol), ['i32.const', 4]]
+            sexprs.push(_set(dataSymbol, ['i32.load', heapLoc]))
+        else
+          console.error('Nested destruction unimplemented')
+          process.exit(1)
   return sexprs
 
 _genSexprs = (astNode) ->

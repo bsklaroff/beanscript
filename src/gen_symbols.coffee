@@ -96,10 +96,6 @@ _parseSymbols = (astNode) ->
     _parseSymbols(astNode.children.body)
     symbolTable.setAnonSymbol(astNode)
 
-  else if astNode.isFunctionDefArg()
-    argName = astNode.children.id.literal
-    symbolTable.setNamedSymbol(astNode, argName)
-
   else if astNode.isFunctionCall()
     _parseSymbols(astNode.children.fn)
     _parseSymbols(astNode.children.args)

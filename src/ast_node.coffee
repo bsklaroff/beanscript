@@ -57,7 +57,6 @@ NODE_TYPES = [
   '_Object_'
   '_ObjectProp_'
   '_FunctionDef_'
-  '_FunctionDefArg_'
   '_FnDefProp_'
   '_Wast_'
   '_Sexpr_'
