@@ -38,6 +38,11 @@ _parseSymbols = (astNode) ->
     fnName = astNode.children.fnName.literal
     symbolTable.setNamedSymbol(astNode, fnName)
 
+  else if astNode.isAndExpression() or astNode.isOrExpression()
+    _parseSymbols(astNode.children.lhs)
+    _parseSymbols(astNode.children.rhs)
+    symbolTable.setAnonSymbol(astNode)
+
   else if astNode.isArray()
     _parseSymbols(astNode.children.items)
     symbolTable.setAnonSymbol(astNode)

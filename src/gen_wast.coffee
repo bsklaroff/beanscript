@@ -305,6 +305,42 @@ _genSexprs = (astNode) ->
     loopSexpr.push(['br', 0])
     sexprs.push(['block', loopSexpr])
 
+  else if astNode.isAndExpression()
+    lhs = astNode.children.lhs
+    rhs = astNode.children.rhs
+    symbol = symbolTable.getNodeSymbol(astNode)
+    lhsSymbol = symbolTable.getNodeSymbol(lhs)
+    rhsSymbol = symbolTable.getNodeSymbol(rhs)
+    sexprs = sexprs.concat(_setHeapVar(symbol, ['i32.const', 0]))
+    sexprs = sexprs.concat(_genSexprs(lhs))
+    ifSexpr = ['if', _unbox(lhsSymbol)]
+    thenSexpr = ['then'].concat(_genSexprs(rhs))
+    innerIfSexpr = ['if', _unbox(rhsSymbol)]
+    innerThenSexpr = ['then'].concat(_setHeapVar(symbol, ['i32.const', 1]))
+    innerIfSexpr.push(innerThenSexpr)
+    thenSexpr.push(innerIfSexpr)
+    ifSexpr.push(thenSexpr)
+    sexprs.push(ifSexpr)
+
+  else if astNode.isOrExpression()
+    lhs = astNode.children.lhs
+    rhs = astNode.children.rhs
+    symbol = symbolTable.getNodeSymbol(astNode)
+    lhsSymbol = symbolTable.getNodeSymbol(lhs)
+    rhsSymbol = symbolTable.getNodeSymbol(rhs)
+    sexprs = sexprs.concat(_setHeapVar(symbol, ['i32.const', 0]))
+    sexprs = sexprs.concat(_genSexprs(lhs))
+    ifSexpr = ['if', _unbox(lhsSymbol)]
+    thenSexpr = ['then'].concat(_setHeapVar(symbol, ['i32.const', 1]))
+    elseSexpr = ['else'].concat(_genSexprs(rhs))
+    innerIfSexpr = ['if', _unbox(rhsSymbol)]
+    innerThenSexpr = ['then'].concat(_setHeapVar(symbol, ['i32.const', 1]))
+    innerIfSexpr.push(innerThenSexpr)
+    elseSexpr.push(innerIfSexpr)
+    ifSexpr.push(thenSexpr)
+    ifSexpr.push(elseSexpr)
+    sexprs.push(ifSexpr)
+
   else if astNode.isArray()
     itemNodes = astNode.children.items
     sexprs = sexprs.concat(_genSexprs(itemNodes))

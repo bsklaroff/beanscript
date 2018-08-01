@@ -505,6 +505,17 @@ _parseTypes = (astNode, insideMatch = false) ->
     _parseTypes(astNode.children.body)
     return
 
+  if astNode.isAndExpression() or astNode.isOrExpression()
+    _parseTypes(astNode.children.lhs)
+    _parseTypes(astNode.children.rhs)
+    symbol = symbolTable.getNodeSymbol(astNode)
+    lhsSymbol = symbolTable.getNodeSymbol(astNode.children.lhs)
+    rhsSymbol = symbolTable.getNodeSymbol(astNode.children.rhs)
+    _setSymbolType(symbol, _genConcreteType(PRIMITIVES.BOOL))
+    _assignSymbolType(lhsSymbol, _genConcreteType(PRIMITIVES.BOOL))
+    _assignSymbolType(rhsSymbol, _genConcreteType(PRIMITIVES.BOOL))
+    return
+
   if astNode.isWast()
     symbol = symbolTable.getNodeSymbol(astNode)
     type = _genVariableType()

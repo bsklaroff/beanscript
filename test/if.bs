@@ -19,5 +19,21 @@ else if a > 1
 else
   print(2)
 
+true_print = ->
+  print(True)
+  return True
+
+false_print = ->
+  print(False)
+  return False
+
 if not a <= 2
   print(8)
+
+if true_print() and false_print() or false_print() and true_print()
+  print(9)
+
+print(10)
+
+if (true_print() or false_print()) and (false_print() or true_print())
+  print(11)

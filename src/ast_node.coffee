@@ -49,6 +49,8 @@ NODE_TYPES = [
   '_ObjectRef_'
   '_FunctionCall_'
   '_OpExpression_'
+  '_AndExpression_'
+  '_OrExpression_'
   '_OpParenGroup_'
   '_Array_'
   '_ArrayRange_'
