@@ -1,17 +1,23 @@
-type Maybe a = Null | Just a
+###
+typeclasses
+###
+
 
 typeclass Show a
   print :: a -> Void
 
-typeclass Eq a <= (Show)
+
+typeclass Eq a
   __eq__ :: a -> a -> Bool
   __neq__ :: a -> a -> Bool
+
 
 typeclass Ord a <= (Eq)
   __lt__ :: a -> a -> Bool
   __lte__ :: a -> a -> Bool
   __gt__ :: a -> a -> Bool
   __gte__ :: a -> a -> Bool
+
 
 typeclass Num a <= (Ord)
   __neg__ :: a -> a
@@ -21,16 +27,31 @@ typeclass Num a <= (Ord)
   __div__ :: a -> a -> a
   __rem__ :: a -> a -> a
 
-typeinst Num I32
+
+###
+I32 type
+###
+
+
+typeinst Show I32
   print: (x) ->
     ((i32.store (i32.const 0) x))
     ((call $print (i32.const 0)))
+
+
+typeinst Eq I32
   __eq__: (x, y) -> ((i32.eq x y))
   __neq__: (x, y) -> ((i32.ne x y))
+
+
+typeinst Ord I32
   __lt__: (x, y) -> ((i32.lt_s x y))
   __lte__: (x, y) -> ((i32.le_s x y))
   __gt__: (x, y) -> ((i32.gt_s x y))
   __gte__: (x, y) -> ((i32.ge_s x y))
+
+
+typeinst Num I32
   __neg__: (x) -> ((i32.sub (i32.const 0) x))
   __add__: (x, y) -> ((i32.add x y))
   __sub__: (x, y) -> ((i32.sub x y))
@@ -39,16 +60,30 @@ typeinst Num I32
   __rem__: (x, y) -> ((i32.rem_s x y))
 
 
-typeinst Num I64
+###
+I64 type
+###
+
+
+typeinst Show I64
   print: (x) ->
     ((i64.store (i32.const 0) x))
     ((call $print (i32.const 1)))
+
+
+typeinst Eq I64
   __eq__: (x, y) -> ((i64.eq x y))
   __neq__: (x, y) -> ((i64.ne x y))
+
+
+typeinst Ord I64
   __lt__: (x, y) -> ((i64.lt_s x y))
   __lte__: (x, y) -> ((i64.le_s x y))
   __gt__: (x, y) -> ((i64.gt_s x y))
   __gte__: (x, y) -> ((i64.ge_s x y))
+
+
+typeinst Num I64
   __neg__: (x) -> ((i64.sub (i64.const 0) x))
   __add__: (x, y) -> ((i64.add x y))
   __sub__: (x, y) -> ((i64.sub x y))
@@ -56,18 +91,42 @@ typeinst Num I64
   __div__: (x, y) -> ((i64.div_s x y))
   __rem__: (x, y) -> ((i64.rem_s x y))
 
-typeinst Eq Bool
+
+###
+Bool type
+###
+
+
+typeinst Show Bool
   print: (x) ->
     ((i32.store (i32.const 0) x))
     ((call $print (i32.const 2)))
+
+
+typeinst Eq Bool
   __eq__: (x, y) -> ((i32.eq x y))
   __neq__: (x, y) -> ((i32.ne x y))
+
 
 __not__ :: Bool -> Bool
 __not__ = (x) ->
   if x
     return False
   return True
+
+
+###
+Maybe type
+###
+
+
+type Maybe a = Null | Just a
+
+
+###
+Array implementation
+###
+
 
 # alloc allocates nbytes, returns heap pointer to start of allocated memory
 _alloc :: I32 -> I32
@@ -76,13 +135,9 @@ _alloc = (nbytes) ->
   hp = ((i32.add (get_global $hp) (i32.const 4)))
   ((set_global $hp (i32.add (get_global $hp) nbytes)))
   return hp
-
-###
-Array functions
-###
-
 len :: Arr a -> I32
 len = (arr) -> ((i32.load &arr))
+
 
 # TODO: check array bounds
 __arr_set__ :: Arr a -> I32 -> a -> Void
@@ -91,12 +146,14 @@ __arr_set__ = (arr, idx, val) ->
   heap_loc = data_start + idx * 4
   ((i32.store heap_loc &val))
 
+
 # TODO: check array bounds
 __arr_get__ :: Arr a -> I32 -> a
 __arr_get__ = (arr, idx) ->
   data_start = ((i32.load (i32.add &arr (i32.const 8))))
   heap_loc = data_start + idx * 4
   return_ptr ((i32.load heap_loc))
+
 
 push :: Arr a -> a -> Void
 push = (arr, val) ->
@@ -109,6 +166,7 @@ push = (arr, val) ->
   data_start = ((i32.load (i32.add &arr (i32.const 8))))
   heap_loc = data_start + (new_arr_len - 1) * 4
   ((i32.store heap_loc &val))
+
 
 _reallocate :: Arr a -> Void
 _reallocate = (arr) ->
@@ -123,6 +181,7 @@ _reallocate = (arr) ->
     i = i + 1
   ((i32.store (i32.add &arr (i32.const 4)) new_allocated))
   ((i32.store (i32.add &arr (i32.const 8)) new_data_start))
+
 
 pop :: Arr a -> a
 pop = (arr) ->

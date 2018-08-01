@@ -45,7 +45,7 @@ alias bsc='coffee /path/to/beanscript/main.coffee'
 alias runwasm='node /path/to/beanscript/runwasm.js'
 function bs {
   TEMP=$(mktemp)
-  bsc $1 > $TEMP
+  bsc $@ > $TEMP
   runwast $TEMP
   rm $TEMP
 }
