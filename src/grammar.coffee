@@ -160,8 +160,8 @@ GRAMMAR = {
     'nonOpExpr{lhs} op{op} expr{rhs}'
   ]
   op: [
+    '_REMAINDER_'
     '_EXPONENT_'
-    '_MOD_'
     '_TIMES_'
     '_DIVIDED_BY_'
     '_PLUS_'
@@ -326,7 +326,7 @@ GRAMMAR = {
   TWO_COLON: '::'
   TWO_DOT: '\\.\\.'
   COMMA: ','
-  _MOD_: '%'
+  _REMAINDER_: '%'
   _EXPONENT_: '\\*\\*'
   _TIMES_: '\\*'
   _DIVIDED_BY_: '/'

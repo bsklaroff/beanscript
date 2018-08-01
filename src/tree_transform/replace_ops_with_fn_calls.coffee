@@ -1,8 +1,8 @@
 ASTNode = require('../ast_node')
 
 OP_MAP =
+  _REMAINDER_: '__rem__'
   _EXPONENT_: '__exp__'
-  _MOD_: '__mod__'
   _TIMES_: '__mul__'
   _DIVIDED_BY_: '__div__'
   _PLUS_: '__add__'

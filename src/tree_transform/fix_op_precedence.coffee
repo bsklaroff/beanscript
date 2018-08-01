@@ -9,7 +9,7 @@ OP_PRECEDENCE_LEVELS = [
   ['_EQUALS_EQUALS_', '_NOT_EQUALS_']
   ['_LT_', '_LTE_', '_GT_', '_GTE_']
   ['_PLUS_', '_MINUS_']
-  ['_EXPONENT_', '_MOD_', '_TIMES_', '_DIVIDED_BY_']
+  ['_REMAINDER_', '_EXPONENT_', '_TIMES_', '_DIVIDED_BY_']
   ['_NEG_']
 ]
 

@@ -14,11 +14,12 @@ typeclass Ord a <= (Eq)
   __gte__ :: a -> a -> Bool
 
 typeclass Num a <= (Ord)
+  __neg__ :: a -> a
   __add__ :: a -> a -> a
   __sub__ :: a -> a -> a
   __mul__ :: a -> a -> a
   __div__ :: a -> a -> a
-  __neg__ :: a -> a
+  __rem__ :: a -> a -> a
 
 typeinst Num I32
   print: (x) ->
@@ -30,11 +31,13 @@ typeinst Num I32
   __lte__: (x, y) -> ((i32.le_s x y))
   __gt__: (x, y) -> ((i32.gt_s x y))
   __gte__: (x, y) -> ((i32.ge_s x y))
+  __neg__: (x) -> ((i32.sub (i32.const 0) x))
   __add__: (x, y) -> ((i32.add x y))
   __sub__: (x, y) -> ((i32.sub x y))
   __mul__: (x, y) -> ((i32.mul x y))
   __div__: (x, y) -> ((i32.div_s x y))
-  __neg__: (x) -> ((i32.sub (i32.const 0) x))
+  __rem__: (x, y) -> ((i32.rem_s x y))
+
 
 typeinst Num I64
   print: (x) ->
@@ -46,11 +49,12 @@ typeinst Num I64
   __lte__: (x, y) -> ((i64.le_s x y))
   __gt__: (x, y) -> ((i64.gt_s x y))
   __gte__: (x, y) -> ((i64.ge_s x y))
+  __neg__: (x) -> ((i64.sub (i64.const 0) x))
   __add__: (x, y) -> ((i64.add x y))
   __sub__: (x, y) -> ((i64.sub x y))
   __mul__: (x, y) -> ((i64.mul x y))
   __div__: (x, y) -> ((i64.div_s x y))
-  __neg__: (x) -> ((i64.sub (i64.const 0) x))
+  __rem__: (x, y) -> ((i64.rem_s x y))
 
 typeinst Eq Bool
   print: (x) ->

@@ -1,4 +1,3 @@
-modulo operator
 fn argument matching
 built in hashmap
 
@@ -7,6 +6,7 @@ implement number types other than i32
 - figure out defaulting / coercion
 - do we need monomorphism restriction?
 - multi-param typeclasses?
+implement exponent operator
 
 add error handling with pretty error messages
 add exceptions
