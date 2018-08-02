@@ -288,6 +288,7 @@ _genSexprs = (astNode) ->
     idx = newTypes[unboxedType.name].constructors.indexOf(constructor)
     boxed = astNode.children.boxed
     boxedSymbol = symbolTable.getNodeSymbol(boxed)
+    sexprs = sexprs.concat(_genSexprs(boxed))
     ifSexpr = ['if', ['i32.eq', _unbox(boxedSymbol), ['i32.const', idx]]]
     thenSexpr = ['then']
     thenSexpr = thenSexpr.concat(_setHeapVar(symbol, ['i32.const', 1]))
@@ -433,7 +434,11 @@ _genSexprs = (astNode) ->
     # For polymorphic fns, pass context typevar types
     # Find each typevar by recursive searching the fnType
     for contextTypevar in fnType.contextTypevars
-      contextType = _findContextTypevar(contextTypevar, fnType.arr, argSymbols.concat(fnCallSymbol))
+      argSchemes = utils.map(argSymbols.concat(fnCallSymbol), (symbol) -> typeEnv[symbol])
+      contextType = _findContextTypevar(contextTypevar, fnType.arr, argSchemes)
+      if not contextType?
+        console.error("Failed to find context typevar #{contextTypevar} for #{fnCallSymbol}")
+        process.exit(1)
       fnCallSexpr.push(contextType)
     # Pass actual arguments
     for argSymbol in argSymbols
@@ -468,9 +473,12 @@ _genSexprs = (astNode) ->
 
   else if astNode.isReturn()
     returnVal = astNode.children.returnVal
-    returnValSymbol = symbolTable.getNodeSymbol(returnVal)
-    sexprs = sexprs.concat(_genSexprs(returnVal))
-    sexprs.push(['return', _get(returnValSymbol)])
+    if returnVal.isEmpty()
+      sexprs.push(['return'])
+    else
+      returnValSymbol = symbolTable.getNodeSymbol(returnVal)
+      sexprs = sexprs.concat(_genSexprs(returnVal))
+      sexprs.push(['return', _get(returnValSymbol)])
 
   else if astNode.isReturnPtr()
     returnVal = astNode.children.returnVal
@@ -479,6 +487,12 @@ _genSexprs = (astNode) ->
     sexprs.push(['return', _unbox(returnValSymbol)])
 
   return sexprs
+
+_genScheme = (forall, type) ->
+  return {
+    forall: forall
+    type: type
+  }
 
 _genConcreteType = (name) ->
   return {
@@ -503,12 +517,12 @@ _get = (symbol) ->
     return ['get_global', symbol]
   return ['get_local', symbol]
 
-# TODO: recursively search function arguments for context typevar
-_findContextTypevar = (typevar, typeArr, argAndReturnSymbols) ->
+_findContextTypevar = (typevar, typeArr, argSchemes) ->
   for type, i in typeArr
+
     # If we found a symbol corresponding to our context typevar, try to return it
     if type.form == FORMS.VARIABLE and type.var == typevar
-      targetScheme = typeEnv[argAndReturnSymbols[i]]
+      targetScheme = argSchemes[i]
       targetType = targetScheme.type
       if targetType.form == FORMS.CONCRETE
         # We found a concrete type, return it
@@ -524,6 +538,24 @@ _findContextTypevar = (typevar, typeArr, argAndReturnSymbols) ->
         # Function types cannot be typeclassed for now
         console.error('Function type cannot be passed as a context typevar')
         process.exit(1)
+
+    else if type.form == FORMS.CONSTRUCTED
+      if argSchemes[i].type.form != FORMS.CONSTRUCTED
+        console.error("Arg scheme #{JSON.stringify(argSchemes[i])} should be constructed form")
+        process.exit(1)
+      paramSchemes = utils.map(argSchemes[i].type.params, (p) -> _genScheme(argSchemes[i].forall, p))
+      contextTypevar = _findContextTypevar(typevar, type.params, paramSchemes)
+      if contextTypevar?
+        return contextTypevar
+
+    else if type.form == FORMS.FUNCTION
+      if argSchemes[i].type.form != FORMS.FUNCTION
+        console.error("Arg scheme #{JSON.stringify(argSchemes[i])} should be function form")
+        process.exit(1)
+      paramSchemes = utils.map(argSchemes[i].type.arr, (p) -> _genScheme(argSchemes[i].forall, p))
+      contextTypevar = _findContextTypevar(typevar, type.arr, paramSchemes)
+      if contextTypevar?
+        return contextTypevar
   return
 
 _setHeapVar = (symbol, dataSexpr) ->

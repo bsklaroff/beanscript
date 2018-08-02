@@ -453,11 +453,14 @@ _parseTypes = (astNode, insideMatch = false) ->
     return functionDefType
 
   if astNode.isReturn()
-    childType = _parseTypes(astNode.children.returnVal)
-    if not childType?
-      console.error("No type found for node: #{JSON.stringify(astNode.children.returnVal)}")
-      process.exit(1)
     returnSymbol = symbolTable.scopeReturnSymbol(astNode.scopeId)
+    if astNode.children.returnVal.isEmpty()
+      childType = _genConcreteType(PRIMITIVES.VOID)
+    else
+      childType = _parseTypes(astNode.children.returnVal)
+      if not childType?
+        console.error("No type found for node: #{JSON.stringify(astNode.children.returnVal)}")
+        process.exit(1)
     _assignSymbolType(returnSymbol, childType)
     return
 

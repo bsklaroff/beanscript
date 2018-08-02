@@ -98,6 +98,7 @@ GRAMMAR = {
   ]
   _Return_: [
     'RETURN fnDefOrExpr{returnVal}'
+    'RETURN _EMPTY_{returnVal}'
   ]
 
   _If_: [
@@ -234,7 +235,18 @@ GRAMMAR = {
 
   _Constructed_: [
     '_ID_{constructor} SPACE LEFT_PAREN _Constructed_{data} RIGHT_PAREN'
-    '_ID_{constructor} SPACE nonOpExpr{data}'
+    '_ID_{constructor} SPACE constructedInner{data}'
+  ]
+  constructedInner: [
+    '_OpParenGroup_'
+    '_Array_'
+    '_ArrayRange_'
+    '_Object_'
+    '_BOOLEAN_'
+    '_VarOrFnCall_'
+    '_String_'
+    '_Wast_'
+    '_NUMBER_'
   ]
 
   _Destruction_: [
@@ -302,7 +314,7 @@ GRAMMAR = {
   TYPECLASS: 'typeclass '
   TYPEINST: 'typeinst '
   RETURN_PTR: 'return_ptr '
-  RETURN: 'return '
+  RETURN: 'return'
   IF: 'if '
   WHILE: 'while '
   ELSE: 'else'

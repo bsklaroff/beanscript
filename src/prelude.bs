@@ -8,14 +8,18 @@ typeclass Show a
 
 
 typeclass Eq a
-  __eq__ :: a -> a -> Bool
+  __eq__  :: a -> a -> Bool
   __neq__ :: a -> a -> Bool
 
 
+typeclass Hashable a <= (Eq)
+  hash :: a -> I32
+
+
 typeclass Ord a <= (Eq)
-  __lt__ :: a -> a -> Bool
+  __lt__  :: a -> a -> Bool
   __lte__ :: a -> a -> Bool
-  __gt__ :: a -> a -> Bool
+  __gt__  :: a -> a -> Bool
   __gte__ :: a -> a -> Bool
 
 
@@ -44,6 +48,10 @@ typeinst Eq I32
   __neq__: (x, y) -> ((i32.ne x y))
 
 
+typeinst Hashable I32
+  hash: (x) -> abs(x)
+
+
 typeinst Ord I32
   __lt__: (x, y) -> ((i32.lt_s x y))
   __lte__: (x, y) -> ((i32.le_s x y))
@@ -58,6 +66,13 @@ typeinst Num I32
   __mul__: (x, y) -> ((i32.mul x y))
   __div__: (x, y) -> ((i32.div_s x y))
   __rem__: (x, y) -> ((i32.rem_s x y))
+
+
+abs :: I32 -> I32
+abs = (x) ->
+  if x < 0
+    return -x
+  return x
 
 
 ###
@@ -108,6 +123,13 @@ typeinst Eq Bool
   __neq__: (x, y) -> ((i32.ne x y))
 
 
+typeinst Hashable Bool
+  hash: (x) ->
+    if x
+      return 1
+    return 0
+
+
 __not__ :: Bool -> Bool
 __not__ = (x) ->
   if x
@@ -135,6 +157,8 @@ _alloc = (nbytes) ->
   hp = ((i32.add (get_global $hp) (i32.const 4)))
   ((set_global $hp (i32.add (get_global $hp) nbytes)))
   return hp
+
+
 len :: Arr a -> I32
 len = (arr) -> ((i32.load &arr))
 
@@ -191,4 +215,102 @@ pop = (arr) ->
   heap_loc = data_start + new_arr_len * 4
   ((i32.store &arr new_arr_len))
   return_ptr ((i32.load heap_loc))
+
+
+###
+Hashmap implementation
+###
+
+
+type Hashmap k v = _HashmapData {
+  count :: I32
+  alloc :: I32
+  keys :: Arr (Maybe k)
+  vals :: Arr (Maybe v)
+}
+
+
+make_hashmap :: -> Hashmap k v
+make_hashmap = -> _make_hashmap(10)
+
+
+_make_hashmap :: I32 -> Hashmap k v
+_make_hashmap = (alloc) ->
+  keys = []
+  vals = []
+  i = 0
+  while i < alloc
+    push(keys, Null)
+    push(vals, Null)
+    i = i + 1
+  return _HashmapData {
+    count: 0
+    alloc: alloc
+    keys: keys
+    vals: vals
+  }
+
+
+count = (_HashmapData data) -> data.count
+
+
+get :: (Hashable k) => Hashmap k v -> k -> Maybe v
+get = (_HashmapData data, key) ->
+  idx = hash(key) % len(data.keys)
+  while data.keys[idx] =| Just _key
+    if key == _key
+      return data.vals[idx]
+    idx = (idx + 1) % len(data.keys)
+  return Null
+
+
+put :: (Hashable k) => Hashmap k v -> k -> v -> Void
+put = (_HashmapData data, key, val) ->
+  if data.count * 2 >= data.alloc
+    _reallocate_hashmap(_HashmapData data)
+
+  idx = hash(key) % len(data.keys)
+  tombIdx = -1
+  while data.keys[idx] =| Just _key
+    if key == _key
+      if data.vals[idx] =| Null
+        data.count = data.count + 1
+      data.vals[idx] = Just val
+      return
+    if tombIdx == -1 and data.vals[idx] =| Null
+      tombIdx = idx
+    idx = (idx + 1) % len(data.keys)
+
+  if tombIdx != -1
+    idx = tombIdx
+  data.count = data.count + 1
+  data.keys[idx] = Just key
+  data.vals[idx] = Just val
+
+
+_reallocate_hashmap :: (Hashable k) => Hashmap k v -> Void
+_reallocate_hashmap = (_HashmapData data) ->
+  _make_hashmap(data.alloc * 2) =| _HashmapData new_data
+  i = 0
+  while i < len(data.keys)
+    if data.keys[i] =| Just key and data.vals[i] =| Just val
+      put(_HashmapData new_data, key, val)
+    i = i + 1
+  data.alloc = new_data.alloc
+  data.keys = new_data.keys
+  data.vals = new_data.vals
+
+
+del :: (Hashable k, Eq k) => Hashmap k v -> k -> Maybe v
+del = (_HashmapData data, key) ->
+  idx = hash(key) % len(data.keys)
+  while data.keys[idx] =| Just _key
+    if key == _key
+      if data.vals[idx] =| Just _
+        data.count = data.count - 1
+      res = data.vals[idx]
+      data.vals[idx] = Null
+      return res
+    idx = (idx + 1) % len(data.keys)
+  return Null
 

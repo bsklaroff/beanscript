@@ -1,0 +1,76 @@
+map = make_hashmap()
+
+put(map, 23, 47)
+put(map, -5, 10)
+
+print(count(map))
+
+if get(map, 23) =| Just _a
+  print(_a)
+
+if get(map, -5) =| Just _b
+  print(_b)
+
+if get(map, 33) =| Null
+  print(0)
+
+put(map, 33, 20)
+put(map, 23, -99)
+
+print(count(map))
+
+if get(map, 23) =| Just _c
+  print(_c)
+
+if get(map, 33) =| Just _d
+  print(_d)
+
+del(map, 23)
+
+print(count(map))
+
+if get(map, 23) =| Null
+  print(0)
+
+if get(map, 33) =| Just _e
+  print(_e)
+
+put(map, 43, 1234)
+
+print(count(map))
+
+if get(map, 23) =| Null
+  print(0)
+
+if get(map, 33) =| Just _f
+  print(_f)
+
+if get(map, 43) =| Just _g
+  print(_g)
+
+put(map, 1, 1)
+put(map, 2, 2)
+put(map, 3, 3)
+
+print(count(map))
+
+if get(map, 23) =| Null
+  print(0)
+
+if get(map, 1) =| Just _h
+  print(_h)
+
+if get(map, 2) =| Just _i
+  print(_i)
+
+if get(map, 3) =| Just _j
+  print(_j)
+
+if get(map, -5) =| Just _k
+  print(_k)
+
+if get(map, 33) =| Just _l
+  print(_l)
+
+if get(map, 43) =| Just _m
+  print(_m)
