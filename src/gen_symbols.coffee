@@ -88,6 +88,10 @@ _parseSymbols = (astNode) ->
   else if astNode.isBoolean()
     symbolTable.setAnonSymbol(astNode, astNode.literal)
 
+  else if astNode.isChar()
+    literal = if astNode.literal == '"' then 'DOUBLE_QUOTE' else astNode.literal
+    symbolTable.setAnonSymbol(astNode, literal)
+
   else if astNode.isWast()
     symbolTable.setAnonSymbol(astNode)
 

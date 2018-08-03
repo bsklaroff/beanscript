@@ -4,6 +4,7 @@ PRIMITIVES =
   I32: 'I32'
   I64: 'I64'
   BOOL: 'Bool'
+  CHAR: 'Char'
   VOID: 'Void'
 
 CONSTRUCTORS =
@@ -270,6 +271,12 @@ _parseTypes = (astNode, insideMatch = false) ->
   if astNode.isBoolean()
     symbol = symbolTable.getNodeSymbol(astNode)
     type = _genConcreteType(PRIMITIVES.BOOL)
+    _setSymbolType(symbol, type)
+    return type
+
+  if astNode.isChar()
+    symbol = symbolTable.getNodeSymbol(astNode)
+    type = _genConcreteType(PRIMITIVES.CHAR)
     _setSymbolType(symbol, type)
     return type
 

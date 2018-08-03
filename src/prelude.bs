@@ -138,6 +138,17 @@ __not__ = (x) ->
 
 
 ###
+Char type
+###
+
+
+typeinst Show Char
+  print: (x) ->
+    ((i32.store (i32.const 0) x))
+    ((call $print (i32.const 3)))
+
+
+###
 Maybe type
 ###
 

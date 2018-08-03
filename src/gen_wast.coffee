@@ -5,6 +5,7 @@ PRIMITIVES =
   I32: 'I32'
   I64: 'I64'
   BOOL: 'Bool'
+  CHAR: 'Char'
   VOID: 'Void'
 
 CONSTRUCTORS =
@@ -23,6 +24,7 @@ TYPE_INDICES =
   I32: 2
   I64: 3
   Bool: 4
+  Char: 5
 
 symbolTable = null
 newTypes = null
@@ -462,6 +464,11 @@ _genSexprs = (astNode) ->
     literal = if astNode.literal == 'True' then 1 else 0
     sexprs = sexprs.concat(_setHeapVar(symbol, ['i32.const', literal]))
 
+  else if astNode.isChar()
+    symbol = symbolTable.getNodeSymbol(astNode)
+    charCode = astNode.literal.charCodeAt()
+    sexprs = sexprs.concat(_setHeapVar(symbol, ['i32.const', charCode]))
+
   else if astNode.isWast()
     symbol = symbolTable.getNodeSymbol(astNode)
     type = typeEnv[symbol].type
@@ -573,7 +580,7 @@ _getStoreFn = (type) ->
   if type.form not in [FORMS.CONCRETE, FORMS.CONSTRUCTED]
     console.error("Could not get store fn for non-concrete type: #{JSON.stringify(type)}")
     process.exit(1)
-  if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+  if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL, PRIMITIVES.CHAR]
     return 'i32.store'
   else if type.name == PRIMITIVES.I64
     return 'i64.store'
@@ -585,7 +592,7 @@ _getTypeSize = (type) ->
   if type.form not in [FORMS.CONCRETE, FORMS.CONSTRUCTED]
     console.error("Could not get type size for non-concrete type: #{JSON.stringify(type)}")
     process.exit(1)
-  if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+  if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL, PRIMITIVES.CHAR]
     return ['i32.const', '4']
   else if type.name == PRIMITIVES.I64
     return ['i32.const', '8']
@@ -607,7 +614,7 @@ _unbox = (symbol) ->
   if type.form not in [FORMS.CONCRETE, FORMS.CONSTRUCTED]
     console.error("Could not unbox non-concrete type: #{JSON.stringify(type)}")
     process.exit(1)
-  if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL]
+  if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL, PRIMITIVES.CHAR]
     return ['i32.load', _get(symbol)]
   else if type.name == PRIMITIVES.I64
     return ['i64.load', _get(symbol)]

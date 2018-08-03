@@ -15,24 +15,25 @@ var memoryImport = new WebAssembly.Memory({initial: 1})
 TYPES = {
   0: 'I32',
   1: 'I64',
-  2: 'Bool'
+  2: 'Bool',
+  3: 'Char'
 }
 
 function printMemory(type) {
+  memory = new Int32Array(memoryImport.buffer)
   if (TYPES[type] == 'I32') {
-    memory = new Int32Array(memoryImport.buffer)
     console.log(memory[0])
   } else if (TYPES[type] == 'I64') {
     //TODO: implement this
-    memory = new Int32Array(memoryImport.buffer)
     console.log(memory[0])
   } else if (TYPES[type] == 'Bool') {
-    memory = new Uint8Array(memoryImport.buffer)
     if (memory[0] == 1) {
       console.log('True')
     } else {
       console.log('False')
     }
+  } else if (TYPES[type] == 'Char') {
+    console.log(String.fromCharCode(memory[0]))
   }
 }
 

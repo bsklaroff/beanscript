@@ -262,12 +262,12 @@ GRAMMAR = {
     'DOUBLE_QUOTE doubleQuoteString{fragments[]} DOUBLE_QUOTE'
   ]
   singleQuoteString: [
-    '_ESCAPED_SINGLE_QUOTES_ singleQuoteString'
+    '_ESCAPED_SINGLE_QUOTE_ singleQuoteString'
     '_STRING_NO_SINGLE_QUOTE_ singleQuoteString'
     'EMPTY'
   ]
   doubleQuoteString : [
-    '_ESCAPED_DOUBLE_QUOTES_ doubleQuoteString'
+    '_ESCAPED_DOUBLE_QUOTE_ doubleQuoteString'
     '_STRING_NO_DOUBLE_QUOTE_ doubleQuoteString'
     'EMPTY'
   ]
@@ -357,10 +357,10 @@ GRAMMAR = {
   _NEG_: '-'
   SINGLE_QUOTE: "'"
   DOUBLE_QUOTE: '"'
-  _ESCAPED_SINGLE_QUOTES_: "\\\\'+"
-  _STRING_NO_SINGLE_QUOTE_: "[^']+"
-  _ESCAPED_DOUBLE_QUOTES_: '\\\\"+'
-  _STRING_NO_DOUBLE_QUOTE_: '[^"]+'
+  _ESCAPED_SINGLE_QUOTE_: "\\\\'"
+  _STRING_NO_SINGLE_QUOTE_: "[^']+?(?='|\\\\')"
+  _ESCAPED_DOUBLE_QUOTE_: '\\\\"'
+  _STRING_NO_DOUBLE_QUOTE_: '[^"]+?(?="|\\\\")'
   RIGHT_ARROW: '->'
   DOUBLE_RIGHT_ARROW: '=>'
   INDENT: ''

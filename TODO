@@ -1,4 +1,3 @@
-implement strings
 implement number types other than i32
 - figure out defaulting / coercion
 - do we need monomorphism restriction?
@@ -50,6 +49,8 @@ implement these recommendations: https://www.microsoft.com/en-us/research/wp-con
 add syntax for global constants
 fix parser bug where node's empty child array leads to undefined key
 ensure hash function returns positive value
+add Char literals and fns
+parse escaped sequences from strings
 add ternary operator
 add documentation
 allow closures
