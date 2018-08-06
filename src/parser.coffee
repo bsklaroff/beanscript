@@ -1,4 +1,5 @@
 ASTNode = require('./ast_node')
+errors = require('./errors')
 grammar = require('./grammar')
 
 class Parser
@@ -14,10 +15,7 @@ class Parser
     else
       rule = grammar[token.name]
       if not rule?
-        throw {
-          userError: false
-          msg: "ERROR: no rule found for token #{token.name}"
-        }
+        errors.panic("No rule found for token #{token.name}")
     return {
       rule: rule
       patternNum: 0
@@ -82,11 +80,7 @@ class Parser
     while @history[0].parseIdx != @inputStr.length
       @_parseNextRule()
       if @history.length == 0
-        throw {
-          userError: true
-          type: 'parser'
-          loc: @maxParseIdx + 1
-        }
+        errors.userError(errors.types.PARSER, @maxParseIdx + 1)
     return @_astTreeFromHistory()
 
   # Parses next rule in @history
@@ -187,10 +181,7 @@ class Parser
     else
       nextToken = pattern[node.tokenNum]
       if not nextToken?
-        throw {
-          userError: false
-          msg: "ERROR: no token found at position #{node.tokenNum} in pattern #{JSON.stringify(pattern)}"
-        }
+        errors.panic("No token found at position #{node.tokenNum} in pattern #{JSON.stringify(pattern)}")
       @history.push(@_makeHistoryNode(nextToken, node))
     return true
 

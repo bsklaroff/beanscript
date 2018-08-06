@@ -1,4 +1,5 @@
 ASTNode = require('../ast_node')
+errors = require('../errors')
 
 OP_EXPRESSION_NAME = '_OpExpression_'
 
@@ -52,10 +53,10 @@ getOpLists = (astNode) ->
 makeOpTree = (operators, operands, precedenceIdx) ->
   if operators.length == 0
     if operands.length != 1
-      throw new Error("Expected operands of length 1, found #{operands}")
+      errors.panic("Expected operands of length 1, found #{operands}")
     return operands[0]
   if precedenceIdx >= OP_PRECEDENCE_LEVELS.length
-    throw new Error('Precedence index exceeds maximum')
+    errors.panic('Precedence index exceeds maximum')
   i = operators.length - 1
   while i >= 0
     if operators[i].name in OP_PRECEDENCE_LEVELS[precedenceIdx]

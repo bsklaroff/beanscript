@@ -1,4 +1,5 @@
 ASTNode = require('../ast_node')
+errors = require('../errors')
 utils = require('../utils')
 
 replaceStringsWithCharArrays = (astNode) ->
@@ -21,8 +22,7 @@ replaceStringsWithCharArrays = (astNode) ->
       else if fragment.isStringNoSingleQuote() or fragment.isStringNoDoubleQuote()
         strLiteral += fragment.literal
       else
-        console.error('Unexpected string fragment')
-        process.exit(1)
+        errors.panic('Unexpected string fragment')
     charNodes = utils.map(strLiteral, (char) -> ASTNode.make('_CHAR_', char))
     arrNode = ASTNode.make('_Array_')
     arrNode.children = {items: charNodes}

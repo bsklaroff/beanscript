@@ -1,5 +1,5 @@
 fs = require('fs')
-handleError = require('./src/handle_error')
+errors = require('./src/errors')
 utils = require('./src/utils')
 
 usageMessage = '''
@@ -62,7 +62,7 @@ _execArgs = (args) ->
     return wast
 
   catch e
-    handleError(e, prelude, inputStr)
+    errors.handleError(e, prelude, inputStr)
     process.exit(1)
 
 _parseArgs = (argv) ->

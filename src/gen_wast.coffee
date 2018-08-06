@@ -1,4 +1,5 @@
 fs = require('fs')
+errors = require('./errors')
 utils = require('./utils')
 
 PRIMITIVES =
@@ -126,11 +127,9 @@ _getNonTypeclassGlobals = (rootNode, typeclassFns) ->
     if not symbolTable.isGlobal(targetSymbol)
       continue
     if targetSymbol of nonTypeclassGlobals
-      console.error("Cannot redefine global symbol #{targetSymbol}")
-      process.exit(1)
+      errors.panic("Cannot redefine global symbol #{targetSymbol}")
     if targetSymbol of typeclassFns
-      console.error("Cannot redefine typeclass fn #{targetSymbol}")
-      process.exit(1)
+      errors.panic("Cannot redefine typeclass fn #{targetSymbol}")
     nonTypeclassGlobals[targetSymbol] = true
   return nonTypeclassGlobals
 
@@ -236,8 +235,7 @@ _genArgDestructions = (argNodes) ->
             heapLoc = ['i32.add', _get(argSymbol), ['i32.const', 4]]
             sexprs.push(_set(dataSymbol, ['i32.load', heapLoc]))
         else
-          console.error('Nested destruction unimplemented')
-          process.exit(1)
+          errors.panic('Nested destruction unimplemented')
   return sexprs
 
 _genSexprs = (astNode) ->
@@ -266,7 +264,7 @@ _genSexprs = (astNode) ->
       heapLoc = ['i32.add', _get(objSymbol), heapOffset]
       sexprs.push(['i32.store', heapLoc, _get(sourceSymbol)])
     else
-      console.error("Assignment target must be variable or array ref, found #{JSON.stringify(target)}")
+      errors.panic("Assignment target must be variable or array ref, found #{JSON.stringify(target)}")
 
   else if astNode.isConstructed()
     dataNode = astNode.children.data
@@ -304,8 +302,7 @@ _genSexprs = (astNode) ->
           symbol = symbolTable.getNodeSymbol(astNode)
           thenSexpr.push(_set(dataSymbol, ['i32.load', heapLoc]))
       else
-        console.error('Nested destruction unimplemented')
-        process.exit(1)
+        errors.panic('Nested destruction unimplemented')
     ifSexpr.push(thenSexpr)
     sexprs.push(ifSexpr)
 
@@ -439,8 +436,7 @@ _genSexprs = (astNode) ->
       argSchemes = utils.map(argSymbols.concat(fnCallSymbol), (symbol) -> typeEnv[symbol])
       contextType = _findContextTypevar(contextTypevar, fnType.arr, argSchemes)
       if not contextType?
-        console.error("Failed to find context typevar #{contextTypevar} for #{fnCallSymbol}")
-        process.exit(1)
+        errors.panic("Failed to find context typevar #{contextTypevar} for #{fnCallSymbol}")
       fnCallSexpr.push(contextType)
     # Pass actual arguments
     for argSymbol in argSymbols
@@ -518,8 +514,7 @@ _set = (symbol, source) ->
 
 _get = (symbol) ->
   if _isVoid(typeEnv[symbol].type)
-    console.error("Void type found for #{symbol}: #{JSON.stringify(typeEnv[symbol])}")
-    process.exit(1)
+    errors.panic("Void type found for #{symbol}: #{JSON.stringify(typeEnv[symbol])}")
   if symbolTable.isGlobal(symbol) or symbolTable.isFunctionDef(symbol)
     return ['get_global', symbol]
   return ['get_local', symbol]
@@ -539,17 +534,14 @@ _findContextTypevar = (typevar, typeArr, argSchemes) ->
         return _getTypeIndex(targetType)
       else if targetType.form == FORMS.CONSTRUCTED
         # Constructed types cannot be typeclassed for now
-        console.error('Constructed type cannot be passed as a context typevar')
-        process.exit(1)
+        errors.panic('Constructed type cannot be passed as a context typevar')
       else if targetType.form == FORMS.FUNCTION
         # Function types cannot be typeclassed for now
-        console.error('Function type cannot be passed as a context typevar')
-        process.exit(1)
+        errors.panic('Function type cannot be passed as a context typevar')
 
     else if type.form == FORMS.CONSTRUCTED
       if argSchemes[i].type.form != FORMS.CONSTRUCTED
-        console.error("Arg scheme #{JSON.stringify(argSchemes[i])} should be constructed form")
-        process.exit(1)
+        errors.panic("Arg scheme #{JSON.stringify(argSchemes[i])} should be constructed form")
       paramSchemes = utils.map(argSchemes[i].type.params, (p) -> _genScheme(argSchemes[i].forall, p))
       contextTypevar = _findContextTypevar(typevar, type.params, paramSchemes)
       if contextTypevar?
@@ -557,8 +549,7 @@ _findContextTypevar = (typevar, typeArr, argSchemes) ->
 
     else if type.form == FORMS.FUNCTION
       if argSchemes[i].type.form != FORMS.FUNCTION
-        console.error("Arg scheme #{JSON.stringify(argSchemes[i])} should be function form")
-        process.exit(1)
+        errors.panic("Arg scheme #{JSON.stringify(argSchemes[i])} should be function form")
       paramSchemes = utils.map(argSchemes[i].type.arr, (p) -> _genScheme(argSchemes[i].forall, p))
       contextTypevar = _findContextTypevar(typevar, type.arr, paramSchemes)
       if contextTypevar?
@@ -578,26 +569,22 @@ _addToHeap = (type, dataSexpr) ->
 
 _getStoreFn = (type) ->
   if type.form not in [FORMS.CONCRETE, FORMS.CONSTRUCTED]
-    console.error("Could not get store fn for non-concrete type: #{JSON.stringify(type)}")
-    process.exit(1)
+    errors.panic("Could not get store fn for non-concrete type: #{JSON.stringify(type)}")
   if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL, PRIMITIVES.CHAR]
     return 'i32.store'
   else if type.name == PRIMITIVES.I64
     return 'i64.store'
-  console.error("Store fn unimplemented for type: #{JSON.stringify(type)}")
-  process.exit(1)
+  errors.panic("Store fn unimplemented for type: #{JSON.stringify(type)}")
   return
 
 _getTypeSize = (type) ->
   if type.form not in [FORMS.CONCRETE, FORMS.CONSTRUCTED]
-    console.error("Could not get type size for non-concrete type: #{JSON.stringify(type)}")
-    process.exit(1)
+    errors.panic("Could not get type size for non-concrete type: #{JSON.stringify(type)}")
   if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL, PRIMITIVES.CHAR]
     return ['i32.const', '4']
   else if type.name == PRIMITIVES.I64
     return ['i32.const', '8']
-  console.error("Type size unimplemented for type: #{JSON.stringify(type)}")
-  process.exit(1)
+  errors.panic("Type size unimplemented for type: #{JSON.stringify(type)}")
   return
 
 _getTypeIndex = (type) ->
@@ -612,14 +599,12 @@ _getTypeIndex = (type) ->
 _unbox = (symbol) ->
   type = typeEnv[symbol].type
   if type.form not in [FORMS.CONCRETE, FORMS.CONSTRUCTED]
-    console.error("Could not unbox non-concrete type: #{JSON.stringify(type)}")
-    process.exit(1)
+    errors.panic("Could not unbox non-concrete type: #{JSON.stringify(type)}")
   if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL, PRIMITIVES.CHAR]
     return ['i32.load', _get(symbol)]
   else if type.name == PRIMITIVES.I64
     return ['i64.load', _get(symbol)]
-  console.error("Unbox unimplemented for type: #{JSON.stringify(type)}")
-  process.exit(1)
+  errors.panic("Unbox unimplemented for type: #{JSON.stringify(type)}")
   return
 
 _parseBSWast = (astNode) ->
@@ -643,8 +628,7 @@ _parseBSWast = (astNode) ->
     varName = astNode.literal[1..]
     symbol = symbolTable.getSymbolName(varName, astNode.scopeId)
     if symbol not of typeEnv
-      console.error("Ref id #{astNode.literal} not found in type env")
-      process.exit(1)
+      errors.panic("Ref id #{astNode.literal} not found in type env")
     return _get(symbol)
 
   else if astNode.isVariable()
@@ -659,8 +643,7 @@ _parseBSWast = (astNode) ->
 
   # TODO: handle double quoted string here
 
-  console.error("Unhandled node during bs wast parsing: #{JSON.stringify(astNode)}")
-  process.exit(1)
+  errors.panic("Unhandled node during bs wast parsing: #{JSON.stringify(astNode)}")
   return
 
 _shouldAddNewline = (arr, i) ->

@@ -1,3 +1,5 @@
+errors = require('./errors')
+
 GRAMMAR = {
   _Program_: [
     'statements{statements[]}'
@@ -407,16 +409,10 @@ class GrammarRule
       if astChildren?
         for key, t of astChildren
           if key not of patternASTChildren
-            throw {
-              userError: false
-              msg: "A pattern for #{@name} is missing ast child #{key}"
-            }
+            errors.panic("A pattern for #{@name} is missing ast child #{key}")
         for key, t of patternASTChildren
           if key not of astChildren
-            throw {
-              userError: false
-              msg: "A pattern for #{@name} is missing ast child #{key}"
-            }
+            errors.panic("A pattern for #{@name} is missing ast child #{key}")
       else
         astChildren = patternASTChildren
     return
@@ -426,10 +422,7 @@ class GrammarRule
     @parenDepth = 0
     tokens = @_parseTokens()
     if @parenDepth != 0
-      throw {
-        userError: false
-        msg: "Pattern #{patternString} has mismatched parentheses"
-      }
+      errors.panic("Pattern #{patternString} has mismatched parentheses")
     delete @patternStringToParse
     delete @parenDepth
     return tokens
@@ -460,10 +453,7 @@ class GrammarRule
         wipToken.subtokens = @_parseTokens()
         foundRightParen = @_parseTokenSuffix(wipToken)
       else
-        throw {
-          userError: false
-          msg: "Rule token #{ruleSeqName} (#{ruleSeqVal}) cannot start a pattern"
-        }
+        errors.panic("Rule token #{ruleSeqName} (#{ruleSeqVal}) cannot start a pattern")
       tokens.push(wipToken)
       if foundRightParen
         break
@@ -480,17 +470,11 @@ class GrammarRule
         @_parseASTChild(wipToken)
       else if ruleSeqName == 'RIGHT_PAREN'
         if @parenDepth <= 0
-          throw {
-            userError: false
-            msg: "Extra right parenthesis while parsing: #{@patternStringToParse}"
-          }
+          errors.panic("Extra right parenthesis while parsing: #{@patternStringToParse}")
         @parenDepth--
         return true
       else
-        throw {
-          userError: false
-          msg: "Rule token #{ruleSeqName} (#{ruleSeqVal}) cannot be suffix"
-        }
+        errors.panic("Rule token #{ruleSeqName} (#{ruleSeqVal}) cannot be suffix")
     return false
 
   ###
@@ -535,20 +519,14 @@ class GrammarRule
   _parseASTChild: (wipToken) ->
     [ruleSeqName, ruleSeqVal] = @_getNextRuleSeq()
     if ruleSeqName != 'ID'
-      throw {
-        userError: false
-        msg: "Rule token #{ruleSeqName} (#{ruleSeqVal}) cannot start AST child"
-      }
+      errors.panic("Rule token #{ruleSeqName} (#{ruleSeqVal}) cannot start AST child")
     wipToken.astChildKey = ruleSeqVal
     [ruleSeqName, ruleSeqVal] = @_getNextRuleSeq()
     if ruleSeqName == 'SQUARE_BRACKETS'
       wipToken.astChildIsArray = true
       [ruleSeqName, ruleSeqVal] = @_getNextRuleSeq()
     if ruleSeqName != 'RIGHT_CURLY_BRACE'
-      throw {
-        userError: false
-        msg: "Rule seq #{ruleSeqName} (#{ruleSeqVal}) cannot end AST child"
-      }
+      errors.panic("Rule seq #{ruleSeqName} (#{ruleSeqVal}) cannot end AST child")
     return
 
   _getNextRuleSeq: ->
@@ -557,10 +535,7 @@ class GrammarRule
       if match?
         @patternStringToParse = @patternStringToParse[match[0].length..]
         return [name, match[0]]
-    throw {
-      userError: false
-      msg: "No valid rule token found while parsing: #{@patternStringToParse}"
-    }
+    errors.panic("No valid rule token found while parsing: #{@patternStringToParse}")
 
 anonStarIdx = 0
 grammar = {}

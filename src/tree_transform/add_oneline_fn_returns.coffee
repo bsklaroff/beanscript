@@ -1,4 +1,5 @@
 ASTNode = require('../ast_node')
+errors = require('../errors')
 
 addOnelineFnReturns = (astNode) ->
   # If astNode is an array, check each of its elements for oneline fns
@@ -12,11 +13,9 @@ addOnelineFnReturns = (astNode) ->
   else if astNode.isFunctionDef()
     if astNode.children.body[0].isEmpty()
       if astNode.children.body.length != 2
-        console.log("ERROR: expected one-line fn body to have exactly two statements")
-        process.exit(1)
+        errors.panic("Expected one-line fn body to have exactly two statements")
       else if astNode.children.body[1].isReturn()
-        console.log("ERROR: one-line fn should not use return keyword")
-        process.exit(1)
+        errors.panic("One-line fn should not use return keyword")
       returnNode = ASTNode.make('_Return_')
       returnNode.children = {returnVal: astNode.children.body[1]}
       astNode.children.body = [returnNode]

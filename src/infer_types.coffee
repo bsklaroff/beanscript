@@ -1,3 +1,4 @@
+errors = require('./errors')
 utils = require('./utils')
 
 PRIMITIVES =
@@ -103,8 +104,7 @@ _parseNewTypes = (rootNode) ->
       for optNode in astNode.children.options
         constructor = optNode.children.constructor.literal
         if constructor of typeConstructors
-          console.error("Type constructor #{constructor} defined multiple times")
-          process.exit(1)
+          errors.panic("Type constructor #{constructor} defined multiple times")
         dataTypeNode = optNode.children.dataType
         typevarMap = null
         dataScheme = null
@@ -114,8 +114,7 @@ _parseNewTypes = (rootNode) ->
           dataScheme = _generalizeType(dataType, 0)
           for k of typevarMap
             if k not in typeParams
-              console.error("Typevar #{k} in constructor #{constructor} not found in declaration for type #{typeName}")
-              process.exit(1)
+              errors.panic("Typevar #{k} in constructor #{constructor} not found in declaration for type #{typeName}")
         typeConstructors[constructor] = {
           type: typeName
           typevar_map: typevarMap
@@ -133,8 +132,7 @@ _parseSupertypes = (rootNode) ->
     if astNode.isTypeclassDef()
       typeclass = astNode.children.typeclass.children.class.literal
       if typeclass of superclasses
-        console.error("Typeclass #{typeclass} defined multiple times")
-        process.exit(1)
+        errors.panic("Typeclass #{typeclass} defined multiple times")
       superclasses[typeclass] = {}
       for superclass in astNode.children.superclasses
         superclasses[typeclass][superclass.literal] = true
@@ -161,8 +159,7 @@ _parseTypeDefs = (astNode, typeclassInfo = null) ->
   else if astNode.isTypeDef()
     symbol = symbolTable.getNodeSymbol(astNode)
     if symbol of typeEnv
-      console.error("Multiple type annotations for symbol #{symbol}")
-      process.exit(1)
+      errors.panic("Multiple type annotations for symbol #{symbol}")
     {type, anonTypevarMap, anonContext} = _parseTypeAnnotation(astNode.children.type)
     _assignSymbolType(symbol, type)
     # The following code deals with typeclasses
@@ -174,8 +171,7 @@ _parseTypeDefs = (astNode, typeclassInfo = null) ->
     if typeclassInfo?
       typeclassAnon = typeclassInfo.anonType
       if typeclassAnon not of anonTypevarMap or typeclassAnon not of anonContext
-        console.error("Typeclass anonType #{typeclassAnon} not found in context of type def: #{JSON.stringify(astNode)}")
-        process.exit(1)
+        errors.panic("Typeclass anonType #{typeclassAnon} not found in context of type def: #{JSON.stringify(astNode)}")
       variableType = anonTypevarMap[typeclassAnon]
       newInfo = {className: typeclassInfo.className, typevar: variableType.var}
       fnTypeclasses[symbol] = newInfo
@@ -208,8 +204,7 @@ _parseTypeNode = (typeNode, typevarMap) ->
     return _parseConstructedType(typeNode, typevarMap)
   if typeNode.isFunctionType()
     return _parseFunctionType(typeNode, typevarMap)
-  console.error("Unknown type node #{JSON.stringify(typeNode)}")
-  process.exit(1)
+  errors.panic("Unknown type node #{JSON.stringify(typeNode)}")
   return
 
 _parseIdType = (idTypeNode, typevarMap) ->
@@ -284,23 +279,20 @@ _parseTypes = (astNode, insideMatch = false) ->
     symbol = symbolTable.getNodeSymbol(astNode)
     if insideMatch
       if symbol of typeEnv
-        console.error("Symbol #{symbol} assigned before destruction")
-        process.exit(1)
+        errors.panic("Symbol #{symbol} assigned before destruction")
       type = _genVariableType()
       _setSymbolType(symbol, type)
       return type
     scheme = typeEnv[symbol]
     if not scheme?
-      console.error("Symbol #{symbol} referenced before assignment")
-      process.exit(1)
+      errors.panic("Symbol #{symbol} referenced before assignment")
     return _instantiateScheme(scheme)
 
   if astNode.isConstructed()
     constructor = astNode.children.constructor.literal
     dataNode = astNode.children.data
     if constructor not of typeConstructors
-      console.error("Undeclared constructor: #{constructor}")
-      process.exit(1)
+      errors.panic("Undeclared constructor: #{constructor}")
     _parseTypes(dataNode, insideMatch)
     typeInfo = typeConstructors[constructor]
     [typeName, typevarMap, dataScheme] = [typeInfo.type, typeInfo.typevar_map, typeInfo.data_scheme]
@@ -325,8 +317,7 @@ _parseTypes = (astNode, insideMatch = false) ->
     # of this node's type we just set above
     if dataNode.isEmpty()
       if dataScheme?
-        console.error("Constructor #{constructor} missing data node")
-        process.exit(1)
+        errors.panic("Constructor #{constructor} missing data node")
     else
       dataType = _applySubstType(dataScheme.type, subst)
       dataSymbol = symbolTable.getNodeSymbol(dataNode)
@@ -337,8 +328,7 @@ _parseTypes = (astNode, insideMatch = false) ->
     boxed = astNode.children.boxed
     unboxed = astNode.children.unboxed
     if unboxed.isVariable()
-      console.error("No data constructor found called #{unboxed.children.id.literal}")
-      process.exit(1)
+      errors.panic("No data constructor found called #{unboxed.children.id.literal}")
     boxedType = _parseTypes(boxed)
     unboxedType = _parseTypes(unboxed, true)
     subst = _unifyTypes(boxedType, unboxedType)
@@ -370,8 +360,7 @@ _parseTypes = (astNode, insideMatch = false) ->
       key = propNode.children.key.literal
       propType = _parseTypes(propNode.children.val, insideMatch)
       if key of props
-        console.error("Key #{key} redefined in object #{JSON.stringify(astNode)}")
-        process.exit(1)
+        errors.panic("Key #{key} redefined in object #{JSON.stringify(astNode)}")
       props[key] = propType
     type = _genObjectType(props)
     _setSymbolType(symbol, type)
@@ -401,8 +390,7 @@ _parseTypes = (astNode, insideMatch = false) ->
     target = astNode.children.target
     targetSymbol = symbolTable.getNodeSymbol(target)
     if targetSymbol of fnTypeclasses
-      console.error("Typeclass fn #{targetSymbol} defined outside a typeinst")
-      process.exit(1)
+      errors.panic("Typeclass fn #{targetSymbol} defined outside a typeinst")
     if not target.isVariable()
       _parseTypes(target)
     # If function def assignment, deal with recursion by assigning a dummy
@@ -411,8 +399,7 @@ _parseTypes = (astNode, insideMatch = false) ->
     #  _assignSymbolType(targetSymbol, _genVariableType())
     type = _parseTypes(astNode.children.source)
     if not type?
-      console.error("No type found for node: #{JSON.stringify(astNode.children.source)}")
-      process.exit(1)
+      errors.panic("No type found for node: #{JSON.stringify(astNode.children.source)}")
     _assignSymbolType(targetSymbol, type)
     return
 
@@ -424,8 +411,7 @@ _parseTypes = (astNode, insideMatch = false) ->
       # Grab typedef from typeclass
       targetSymbol = symbolTable.getNodeSymbol(fnDefPropNode)
       if targetSymbol not of typeEnv or targetSymbol not of fnTypeclasses
-        console.error("Typeinst fn #{targetSymbol} is not defined in any typeclass")
-        process.exit(1)
+        errors.panic("Typeinst fn #{targetSymbol} is not defined in any typeclass")
       typeclassFnScheme = typeEnv[targetSymbol]
       typeclassInfo = fnTypeclasses[targetSymbol]
       # Substitute typeinst type into typeclass typedef
@@ -466,16 +452,14 @@ _parseTypes = (astNode, insideMatch = false) ->
     else
       childType = _parseTypes(astNode.children.returnVal)
       if not childType?
-        console.error("No type found for node: #{JSON.stringify(astNode.children.returnVal)}")
-        process.exit(1)
+        errors.panic("No type found for node: #{JSON.stringify(astNode.children.returnVal)}")
     _assignSymbolType(returnSymbol, childType)
     return
 
   if astNode.isReturnPtr()
     childType = _parseTypes(astNode.children.returnVal)
     if not childType?
-      console.error("No type found for node: #{JSON.stringify(astNode.children.returnVal)}")
-      process.exit(1)
+      errors.panic("No type found for node: #{JSON.stringify(astNode.children.returnVal)}")
     childSymbol = symbolTable.getNodeSymbol(astNode.children.returnVal)
     _assignSymbolType(childSymbol, _genConcreteType(PRIMITIVES.I32))
     returnSymbol = symbolTable.scopeReturnSymbol(astNode.scopeId)
@@ -614,15 +598,12 @@ _instantiateSubstScheme = (scheme, substTypevar, substType) ->
     if typevar of typeclassEnv and newType.form == FORMS.VARIABLE
       typeclassEnv[newType.var] = utils.cloneDeep(typeclassEnv[typevar])
   if not found
-    console.error("Typevar #{substTypevar} failed to substitute into scheme #{scheme}")
-    process.exit(1)
+    errors.panic("Typevar #{substTypevar} failed to substitute into scheme #{scheme}")
   return _applySubstType(scheme.type, subst)
 
 _setSymbolType = (symbol, type) ->
   if typeEnv[symbol]?
-    console.error("Cannot set type #{JSON.stringify(type)} for symbol #{symbol} which already has scheme #{JSON.stringify(typeEnv[symbol])}")
-    console.trace()
-    process.exit(1)
+    errors.panic("Cannot set type #{JSON.stringify(type)} for symbol #{symbol} which already has scheme #{JSON.stringify(typeEnv[symbol])}")
   typeEnv[symbol] = _genScheme([], type)
   return
 
@@ -706,15 +687,14 @@ _typevarOccurs = (typevar, type) ->
       if _typevarOccurs(typevar, subtype)
         return true
     return false
-  console.error("Unknown form for type: #{JSON.stringify(type)}")
-  process.exit(1)
+  errors.panic("Unknown form for type: #{JSON.stringify(type)}")
   return
 
 _bindVariableType = (typevar, type) ->
   if type.form == FORMS.VARIABLE and type.var == typevar
     return {}
   if _typevarOccurs(typevar, type)
-    console.error("Typevar #{typevar} occurs in type #{type}, causing infinite type")
+    errors.panic("Typevar #{typevar} occurs in type #{type}, causing infinite type")
     process.eixt(1)
   res = {}
   res[typevar] = type
@@ -725,35 +705,28 @@ _bindTypeclasses = (typevar, type) ->
   if typevar not of typeclassEnv and typevar not of objclassEnv
     return {}
   if typevar of typeclassEnv and typevar of objclassEnv
-    console.error("Typevar #{typevar} cannot exist in both typeclassEnv and objclassEnv")
-    process.exit(1)
+    errors.panic("Typevar #{typevar} cannot exist in both typeclassEnv and objclassEnv")
   if type.form == FORMS.CONSTRUCTED
     # Constructed typeclasses unimplemented for now
-    console.error("Cannot bind typeclasses of #{typevar} with constructed type #{JSON.stringify(type)}")
-    process.exit(1)
+    errors.panic("Cannot bind typeclasses of #{typevar} with constructed type #{JSON.stringify(type)}")
   else if type.form == FORMS.FUNCTION
     # Higher-kinded typeclasses unimplemented for now
-    console.error("Cannot bind typeclasses of #{typevar} with function type #{JSON.stringify(type)}")
-    process.exit(1)
+    errors.panic("Cannot bind typeclasses of #{typevar} with function type #{JSON.stringify(type)}")
   else if type.form == FORMS.OBJECT
     if typevar of typeclassEnv
-      console.error("Object type #{type.name} cannot have typeclasses: #{typeclassEnv[typevar]}")
-      process.exit(1)
+      errors.panic("Object type #{type.name} cannot have typeclasses: #{typeclassEnv[typevar]}")
     res = {}
     for k, v of objclassEnv[typevar]
       if k not of type.props
-        console.error("Objclass key #{k} not found in object type #{JSON.stringify(type)}")
-        process.exit(1)
+        errors.panic("Objclass key #{k} not found in object type #{JSON.stringify(type)}")
       res = _composeSubsts(_unifyTypes(v, type.props[k]), res)
     return res
   else if type.form == FORMS.CONCRETE
     if typevar of objclassEnv
-      console.error("Type #{type.name} cannot have objclasses: #{objclassEnv[typevar]}")
-      process.exit(1)
+      errors.panic("Type #{type.name} cannot have objclasses: #{objclassEnv[typevar]}")
     for typeclass of typeclassEnv[typevar]
       if not _isSuperclass(typeclass, type.name)
-        console.error("Type #{type.name} is not an instance of #{typeclass}")
-        process.exit(1)
+        errors.panic("Type #{type.name} is not an instance of #{typeclass}")
   else if type.form == FORMS.VARIABLE
     if typevar of objclassEnv
       return _unifyObjclasses(typevar, type.var)
@@ -840,9 +813,7 @@ _unifyTypes = (t0, t1) ->
     t0new.arr = t0new.arr[1..]
     t1new.arr = t1new.arr[1..]
     return _composeSubsts(_unifyTypes(t0new, t1new), subst)
-  console.error("Failed to unify types: #{JSON.stringify(t0)}, #{JSON.stringify(t1)}")
-  console.trace()
-  process.exit(1)
+  errors.panic("Failed to unify types: #{JSON.stringify(t0)}, #{JSON.stringify(t1)}")
   return
 
 ###

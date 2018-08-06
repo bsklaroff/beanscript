@@ -1,5 +1,3 @@
-add error handling with pretty error messages
-
 fix type inference issues
 - redefining fns means the final generalized type is not known until the last
   definition, so if we instantiate a fn before the last definition, the type
@@ -54,6 +52,8 @@ ensure hash function returns positive value
 add Char literals and fns
 parse escaped sequences from strings
 add ternary operator
+add error handling with pretty error messages
+- audit to ensure all user errors are handled properly
 add documentation
 allow closures
 memory management
