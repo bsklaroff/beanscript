@@ -46,7 +46,7 @@ alias runwasm='node /path/to/beanscript/runwasm.js'
 function bs {
   TEMP=$(mktemp)
   bsc $@ > $TEMP
-  runwast $TEMP
+  if [[ -s $TEMP ]]; then runwast $TEMP; fi
   rm $TEMP
 }
 function runwast {

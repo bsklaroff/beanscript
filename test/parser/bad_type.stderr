@@ -1,0 +1,3 @@
+Parse error, line 2:11 of user input
+type Bad = | A
+          ^

@@ -1,0 +1,4 @@
+
+type Bad = | A
+
+print(0)
