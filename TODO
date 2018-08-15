@@ -52,38 +52,47 @@ ensure hash function returns positive value
 add Char literals and fns
 parse escaped sequences from strings
 add ternary operator
+optional, named fn arguments
 add error handling with pretty error messages
 - audit to ensure all user errors are handled properly
-add documentation
 allow closures
 memory management
 
-LONG TERM IDEAS
-alternative fn calling syntax: var.fn(arg) where var is passed as first arg of fn
+good namespacing / module system
+- allows specifying exported types / functions
+- maybe _ specifies module-private fn / data, or unmodifiable object field
+- automatic documentation that scrapes comments directly above fn defs
 json support
 functional language constructs built in (map, filter, reduce, etc)
-currying
-- a(_, 23, _) means curry with 23 as the second argument
 compose operator in prelude
-optional, named fn arguments
+alternative fn calling syntax: var.fn(arg) where var is passed as first arg of fn
+
+compatible with js and typescript
+- package as npm module
+- can require js, ts, or bs as modules
+interactive prompt
+add documentation
+
+
+LONG TERM IDEAS
+promises built in
+- any function can be easily wrapped in a promise
+- cancelable
+- async / await or .then syntax?
+- automatically run functional async fns as goroutines?
+  - incorporate go channels?
 by default, functions do not inherit parent scope
 - also by default, no argument object / array mutation inside functions ->
 - can be made a closure with =>
 - can allow mutation with ->>
 - or both with =>>
-good namespacing / module system
-- allows specifying exported types / functions
-- maybe _ specifies module-private fn / data, or unmodifiable object field
-- automatic documentation that scrapes comments directly above fn defs
-compatible with js
-- package as npm module
-- can require js or bs as modules
-interactive prompt
-inline functions when possible
-promises built in
-- any function can be easily wrapped in a promise
-- cancelable
-- async / await or .then syntax?
+optimizations
+- SSA to remove unnecessary statements
+  - warn about unused variables
+- leave primitives unboxed when possible
+- inline functions when possible
+currying?
+- a(_, 23, _) means curry with 23 as the second argument
 immutable vars / fields?
 gadts?
 'memoize' fn in prelude, operates only on functional functions?
@@ -91,6 +100,7 @@ gadts?
 generalized ffi to easily incorporate c, python libs
 json config file (e.g. detect overflow, check array bounds) for debugging vs. performance
 super long-term: SIMD / GPU / FPGA support
+
 
 SYNTACTIC SUGAR??
 specify infix notation
