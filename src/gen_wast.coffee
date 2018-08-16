@@ -17,7 +17,6 @@ FORMS =
   CONCRETE: 'concrete'
   VARIABLE: 'variable'
   OBJECT: 'object'
-  CONSTRUCTED: 'constructed'
 
 TYPE_INDICES =
   function: 0
@@ -526,19 +525,19 @@ _findContextTypevar = (typevar, typeArr, argSchemes) ->
     if type.form == FORMS.VARIABLE and type.var == typevar
       targetScheme = argSchemes[i]
       targetType = targetScheme.type
-      if targetType.form == FORMS.CONCRETE
-        # We found a concrete type, return it
-        return _getTypeIndex(targetType)
-      else if targetType.form == FORMS.VARIABLE and targetType.var not in targetScheme.forall
+      if targetType.form == FORMS.VARIABLE and targetType.var not in targetScheme.forall
         # We found a typevar arg from the enclosing function, return it
         return _getTypeIndex(targetType)
-      else if targetType.form == FORMS.CONSTRUCTED
+      else if targetType.form == FORMS.CONCRETE
         # Constructed types cannot be typeclassed for now
-        errors.panic('Constructed type cannot be passed as a context typevar')
+        if targetType.params.length > 0
+          errors.panic('Constructed type cannot be passed as a context typevar')
+        # We found a concrete type, return it
+        return _getTypeIndex(targetType)
 
-    else if type.form == FORMS.CONSTRUCTED
-      if argSchemes[i].type.form != FORMS.CONSTRUCTED
-        errors.panic("Arg scheme #{JSON.stringify(argSchemes[i])} should be constructed form")
+    else if type.form == FORMS.CONCRETE and type.params.length > 0
+      if argSchemes[i].type.form != FORMS.CONCRETE or argSchemes[i].type.params.length != type.params.length
+        errors.panic("Arg scheme #{JSON.stringify(argSchemes[i])} should be concrete with #{type.params.length} params")
       if argSchemes[i].type.name != type.name
         errors.panic("Arg scheme #{JSON.stringify(argSchemes[i])} should have name #{type.name}")
       paramSchemes = utils.map(argSchemes[i].type.params, (p) -> _genScheme(argSchemes[i].forall, p))
@@ -560,29 +559,21 @@ _addToHeap = (type, dataSexpr) ->
   ]
 
 _getStoreFn = (type) ->
-  if type.form not in [FORMS.CONCRETE, FORMS.CONSTRUCTED]
+  if type.form != FORMS.CONCRETE
     errors.panic("Could not get store fn for non-concrete type: #{JSON.stringify(type)}")
-  if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL, PRIMITIVES.CHAR]
-    return 'i32.store'
-  else if type.name == PRIMITIVES.I64
+  if type.name == PRIMITIVES.I64
     return 'i64.store'
-  errors.panic("Store fn unimplemented for type: #{JSON.stringify(type)}")
-  return
+  return 'i32.store'
 
 _getTypeSize = (type) ->
-  if type.form not in [FORMS.CONCRETE, FORMS.CONSTRUCTED]
+  if type.form != FORMS.CONCRETE
     errors.panic("Could not get type size for non-concrete type: #{JSON.stringify(type)}")
-  if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL, PRIMITIVES.CHAR]
-    return ['i32.const', '4']
-  else if type.name == PRIMITIVES.I64
+  if type.name == PRIMITIVES.I64
     return ['i32.const', '8']
-  errors.panic("Type size unimplemented for type: #{JSON.stringify(type)}")
-  return
+  return ['i32.const', '4']
 
 _getTypeIndex = (type) ->
-  if type.form == FORMS.CONSTRUCTED and type.name == CONSTRUCTORS.FN
-    return ['i32.const', TYPE_INDICES[type.form]]
-  else if type.form == FORMS.CONCRETE
+  if type.form == FORMS.CONCRETE
     return ['i32.const', TYPE_INDICES[type.name]]
   else if type.form == FORMS.VARIABLE
     return ['get_local', type.var]
@@ -590,14 +581,11 @@ _getTypeIndex = (type) ->
 
 _unbox = (symbol) ->
   type = typeEnv[symbol].type
-  if type.form not in [FORMS.CONCRETE, FORMS.CONSTRUCTED]
+  if type.form != FORMS.CONCRETE
     errors.panic("Could not unbox non-concrete type: #{JSON.stringify(type)}")
-  if type.form == FORMS.CONSTRUCTED or type.name in [PRIMITIVES.I32, PRIMITIVES.BOOL, PRIMITIVES.CHAR]
-    return ['i32.load', _get(symbol)]
-  else if type.name == PRIMITIVES.I64
+  if type.name == PRIMITIVES.I64
     return ['i64.load', _get(symbol)]
-  errors.panic("Unbox unimplemented for type: #{JSON.stringify(type)}")
-  return
+  return ['i32.load', _get(symbol)]
 
 _parseBSWast = (astNode) ->
 
