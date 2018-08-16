@@ -11,13 +11,13 @@ PRIMITIVES =
 
 CONSTRUCTORS =
   ARR: 'Arr'
+  FN: 'Fn'
 
 FORMS =
   CONCRETE: 'concrete'
   VARIABLE: 'variable'
   OBJECT: 'object'
   CONSTRUCTED: 'constructed'
-  FUNCTION: 'function'
 
 TYPE_INDICES =
   function: 0
@@ -53,9 +53,9 @@ genWast = (rootNode, _symbolTable, typeInfo) ->
   fnSigs = {}
   for fnDef in nonTypeinstFnDefs
     fnType = typeEnv[fnDef.symbol].type
-    returnsVoid = _isVoid(fnType.arr[fnType.arr.length - 1])
-    fnSigs[fnType.contextTypevars.length + fnType.arr.length] ?= {}
-    fnSigs[fnType.contextTypevars.length + fnType.arr.length][returnsVoid] = true
+    returnsVoid = _isVoid(fnType.params[fnType.params.length - 1])
+    fnSigs[fnType.contextTypevars.length + fnType.params.length] ?= {}
+    fnSigs[fnType.contextTypevars.length + fnType.params.length][returnsVoid] = true
   # Generate wast
   sexprs = []
   # Generate fnsig type definitions
@@ -153,7 +153,7 @@ _genFn = (symbol, args, statements, scopeId) ->
     fnType = typeEnv[symbol].type
     argSymbols = fnType.contextTypevars.concat(argSymbols)
     sexpr = sexpr.concat(_genArgs(argSymbols))
-    if not _isVoid(fnType.arr[fnType.arr.length - 1])
+    if not _isVoid(fnType.params[fnType.params.length - 1])
       sexpr.push(['result', 'i32'])
   sexpr = sexpr.concat(_genLocals(symbol, args, scopeId))
   sexpr = sexpr.concat(_genArgDestructions(args))
@@ -167,12 +167,12 @@ _genTypeclassFn = (fnDef) ->
   # For polymorphic fns, include context typevars as args
   for contextTypevar in fnType.contextTypevars
     argSymbols.push(contextTypevar)
-  for argType, i in fnType.arr[...fnType.arr.length - 1]
+  for argType, i in fnType.params[...fnType.params.length - 1]
     argSymbols.push("$arg#{i}")
   # Generate sexpr
   sexpr = ['func', symbol]
   sexpr = sexpr.concat(_genArgs(argSymbols))
-  returnsVoid = _isVoid(fnType.arr[fnType.arr.length - 1])
+  returnsVoid = _isVoid(fnType.params[fnType.params.length - 1])
   if not returnsVoid
     sexpr.push(['result', 'i32'])
   # For each possible type of the typeclass typevar, add an if statement and
@@ -425,8 +425,8 @@ _genSexprs = (astNode) ->
     # Get type signature from fn def type
     fnName = symbolTable.getNodeSymbol(astNode.children.fn)
     fnType = typeEnv[fnName].type
-    returnsVoid = _isVoid(fnType.arr[fnType.arr.length - 1])
-    fnCallSexpr.push(_genSigSymbol(fnType.arr.length + fnType.contextTypevars.length, returnsVoid))
+    returnsVoid = _isVoid(fnType.params[fnType.params.length - 1])
+    fnCallSexpr.push(_genSigSymbol(fnType.params.length + fnType.contextTypevars.length, returnsVoid))
     # Pull out concrete symbols to use in contextTypevar search
     argSymbols = utils.map(args, (arg) -> symbolTable.getNodeSymbol(arg))
     fnCallSymbol = symbolTable.getNodeSymbol(astNode)
@@ -434,7 +434,7 @@ _genSexprs = (astNode) ->
     # Find each typevar by recursive searching the fnType
     for contextTypevar in fnType.contextTypevars
       argSchemes = utils.map(argSymbols.concat(fnCallSymbol), (symbol) -> typeEnv[symbol])
-      contextType = _findContextTypevar(contextTypevar, fnType.arr, argSchemes)
+      contextType = _findContextTypevar(contextTypevar, fnType.params, argSchemes)
       if not contextType?
         errors.panic("Failed to find context typevar #{contextTypevar} for #{fnCallSymbol}")
       fnCallSexpr.push(contextType)
@@ -535,25 +535,17 @@ _findContextTypevar = (typevar, typeArr, argSchemes) ->
       else if targetType.form == FORMS.CONSTRUCTED
         # Constructed types cannot be typeclassed for now
         errors.panic('Constructed type cannot be passed as a context typevar')
-      else if targetType.form == FORMS.FUNCTION
-        # Function types cannot be typeclassed for now
-        errors.panic('Function type cannot be passed as a context typevar')
 
     else if type.form == FORMS.CONSTRUCTED
       if argSchemes[i].type.form != FORMS.CONSTRUCTED
         errors.panic("Arg scheme #{JSON.stringify(argSchemes[i])} should be constructed form")
+      if argSchemes[i].type.name != type.name
+        errors.panic("Arg scheme #{JSON.stringify(argSchemes[i])} should have name #{type.name}")
       paramSchemes = utils.map(argSchemes[i].type.params, (p) -> _genScheme(argSchemes[i].forall, p))
       contextTypevar = _findContextTypevar(typevar, type.params, paramSchemes)
       if contextTypevar?
         return contextTypevar
 
-    else if type.form == FORMS.FUNCTION
-      if argSchemes[i].type.form != FORMS.FUNCTION
-        errors.panic("Arg scheme #{JSON.stringify(argSchemes[i])} should be function form")
-      paramSchemes = utils.map(argSchemes[i].type.arr, (p) -> _genScheme(argSchemes[i].forall, p))
-      contextTypevar = _findContextTypevar(typevar, type.arr, paramSchemes)
-      if contextTypevar?
-        return contextTypevar
   return
 
 _setHeapVar = (symbol, dataSexpr) ->
@@ -588,7 +580,7 @@ _getTypeSize = (type) ->
   return
 
 _getTypeIndex = (type) ->
-  if type.form == FORMS.FUNCTION
+  if type.form == FORMS.CONSTRUCTED and type.name == CONSTRUCTORS.FN
     return ['i32.const', TYPE_INDICES[type.form]]
   else if type.form == FORMS.CONCRETE
     return ['i32.const', TYPE_INDICES[type.name]]

@@ -10,13 +10,13 @@ PRIMITIVES =
 
 CONSTRUCTORS =
   ARR: 'Arr'
+  FN: 'Fn'
 
 FORMS =
   CONCRETE: 'concrete'
   VARIABLE: 'variable'
   OBJECT: 'object'
   CONSTRUCTED: 'constructed'
-  FUNCTION: 'function'
 
 symbolTable = null
 typeCount = null
@@ -80,12 +80,6 @@ _genConstructedType = (name, params) ->
     form: FORMS.CONSTRUCTED
     name: name
     params: params
-  }
-
-_genFunctionType = (arr) ->
-  return {
-    form: FORMS.FUNCTION
-    arr: arr
   }
 
 ###
@@ -240,7 +234,7 @@ _parseFunctionType = (functionTypeNode, typevarMap) ->
   resTypes = []
   for argType in argTypes
     resTypes.push(_parseTypeNode(argType, typevarMap))
-  return _genFunctionType(resTypes)
+  return _genConstructedType(CONSTRUCTORS.FN, resTypes)
 
 ###
 Parse and infer all types
@@ -440,7 +434,7 @@ _parseTypes = (astNode, insideMatch = false) ->
       _setSymbolType(returnSymbol, _genConcreteType(PRIMITIVES.VOID))
     typeArr.push(_instantiateScheme(typeEnv[returnSymbol]))
     # Set function def symbol type
-    functionDefType = _genFunctionType(typeArr)
+    functionDefType = _genConstructedType(CONSTRUCTORS.FN, typeArr)
     functionDefSymbol = symbolTable.getNodeSymbol(astNode)
     _setSymbolType(functionDefSymbol, functionDefType)
     return functionDefType
@@ -477,7 +471,7 @@ _parseTypes = (astNode, insideMatch = false) ->
     typeArr.push(returnType)
     # Unify function type with type pulled from function definition
     fnDefType = _parseTypes(astNode.children.fn)
-    subst = _unifyTypes(fnDefType, _genFunctionType(typeArr))
+    subst = _unifyTypes(fnDefType, _genConstructedType(CONSTRUCTORS.FN, typeArr))
     _applySubstEnv(subst)
     # Function call type is unified return type
     fnCallType = _applySubstType(returnType, subst)
@@ -567,11 +561,6 @@ _ftvOfType = (type) ->
       subFtv = _ftvOfType(subtype)
       for k of subFtv
         ftv[k] = true
-  else if type.form == FORMS.FUNCTION
-    for subtype in type.arr
-      subFtv = _ftvOfType(subtype)
-      for k of subFtv
-        ftv[k] = true
   return ftv
 
 _instantiateScheme = (scheme) ->
@@ -653,10 +642,6 @@ _applySubstType = (type, subst) ->
     newType.params = []
     for param in type.params
       newType.params.push(_applySubstType(param, subst))
-  else if type.form == FORMS.FUNCTION
-    newType.arr = []
-    for subtype in type.arr
-      newType.arr.push(_applySubstType(subtype, subst))
   return newType
 
 _composeSubsts = (s0, s1) ->
@@ -682,11 +667,6 @@ _typevarOccurs = (typevar, type) ->
       if _typevarOccurs(typevar, param)
         return true
     return false
-  if type.form == FORMS.FUNCTION
-    for subtype in type.arr
-      if _typevarOccurs(typevar, subtype)
-        return true
-    return false
   errors.panic("Unknown form for type: #{JSON.stringify(type)}")
   return
 
@@ -709,9 +689,6 @@ _bindTypeclasses = (typevar, type) ->
   if type.form == FORMS.CONSTRUCTED
     # Constructed typeclasses unimplemented for now
     errors.panic("Cannot bind typeclasses of #{typevar} with constructed type #{JSON.stringify(type)}")
-  else if type.form == FORMS.FUNCTION
-    # Higher-kinded typeclasses unimplemented for now
-    errors.panic("Cannot bind typeclasses of #{typevar} with function type #{JSON.stringify(type)}")
   else if type.form == FORMS.OBJECT
     if typevar of typeclassEnv
       errors.panic("Object type #{type.name} cannot have typeclasses: #{typeclassEnv[typevar]}")
@@ -804,15 +781,6 @@ _unifyTypes = (t0, t1) ->
     t0new.params = t0new.params[1..]
     t1new.params = t1new.params[1..]
     return _composeSubsts(_unifyTypes(t0new, t1new), subst)
-  if t0.form == FORMS.FUNCTION and t1.form == FORMS.FUNCTION and t0.arr.length == t1.arr.length
-    if t0.arr.length == 0
-      return {}
-    subst = _unifyTypes(t0.arr[0], t1.arr[0])
-    t0new = _applySubstType(t0, subst)
-    t1new = _applySubstType(t1, subst)
-    t0new.arr = t0new.arr[1..]
-    t1new.arr = t1new.arr[1..]
-    return _composeSubsts(_unifyTypes(t0new, t1new), subst)
   errors.panic("Failed to unify types: #{JSON.stringify(t0)}, #{JSON.stringify(t1)}")
   return
 
@@ -822,7 +790,7 @@ For each polymorphic function, specify list of typevars that must be supplied as
 
 _addContextTypevars = ->
   for symbol, scheme of typeEnv
-    if scheme.type.form == FORMS.FUNCTION
+    if scheme.type.form == FORMS.CONSTRUCTED and scheme.type.name == CONSTRUCTORS.FN
       scheme.type.contextTypevars = []
       for typevar of _ftvOfType(scheme.type)
         if typevar of typeclassEnv
